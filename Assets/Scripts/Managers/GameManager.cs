@@ -222,10 +222,9 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator SpinRoutine()
     {
-        float spinDuration = GetSpinDuration();
         float elapsed = 0f;
 
-        while (elapsed < spinDuration && !stopRequested)
+        while (elapsed < GetSpinDuration() && !stopRequested)
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -252,14 +251,18 @@ public class GameManager : MonoBehaviour
                 slotView.QuickStop(lastResult.resultMatrix);
 
                 // Wait for the snap animation to settle before processing result
-                float quickStopWaitTime = 0.5f;
+                float quickStopWaitTime = 0.4f;
                 yield return new WaitForSeconds(quickStopWaitTime);
 
                 OnReelsStoppedComplete();
             }
+            else if (currentSpinSpeed == SpinSpeed.Turbo)
+            {
+                slotView.StopSpin(lastResult.resultMatrix, OnReelsStoppedComplete, isTurbo: true);
+            }
             else
             {
-                slotView.StopSpin(lastResult.resultMatrix, OnReelsStoppedComplete);
+                slotView.StopSpin(lastResult.resultMatrix, OnReelsStoppedComplete, isTurbo: false);
             }
         }
         else
@@ -364,6 +367,12 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
 
+        if (lastResult != null && lastResult.dualWheelsBonusData != null && lastResult.dualWheelsBonusData.isTriggered)
+        {
+            yield return StartCoroutine(DelayDualWheelsTriggerResult());
+            yield break;
+        }
+
         if (lastResult != null && lastResult.uSpinData != null && lastResult.uSpinData.triggered)
         {
             yield return StartCoroutine(DelayUSpinTriggerResult());
@@ -383,6 +392,30 @@ public class GameManager : MonoBehaviour
         }
 
         ResumeAfterSpecialFeature();
+    }
+
+    private IEnumerator DelayDualWheelsTriggerResult()
+    {
+        AudioManager.Instance?.Play3UspinWinLineLoop();
+
+        yield return new WaitForSeconds(1.0f);
+
+        if (uiManager != null)
+        {
+            uiManager.TriggerDualWheelsBonus(lastResult.dualWheelsBonusData, () =>
+            {
+                AudioManager.Instance?.Stop3UspinWinLineLoop();
+                if (lastResult != null && lastResult.dualWheelsBonusData != null)
+                {
+                    lastResult.dualWheelsBonusData.isTriggered = false;
+                }
+                ResumeAfterSpecialFeature();
+            });
+        }
+        else
+        {
+            ResumeAfterSpecialFeature();
+        }
     }
 
     private void ResumeAfterSpecialFeature()
@@ -433,7 +466,10 @@ public class GameManager : MonoBehaviour
         uiManager.TriggerUSpinBonus(lastResult.uSpinData, () =>
         {
             AudioManager.Instance?.Stop3UspinWinLineLoop();
-            lastResult.uSpinData.triggered = false;
+            if (lastResult != null && lastResult.uSpinData != null)
+            {
+                lastResult.uSpinData.triggered = false;
+            }
             ResumeAfterSpecialFeature();
         });
     }
@@ -451,7 +487,10 @@ public class GameManager : MonoBehaviour
 
         uiManager.TriggerMoneyBagBonus(lastResult.moneyBagData, () =>
         {
-            lastResult.moneyBagData.triggered = false;
+            if (lastResult != null && lastResult.moneyBagData != null)
+            {
+                lastResult.moneyBagData.triggered = false;
+            }
             ResumeAfterSpecialFeature();
         });
     }
@@ -604,6 +643,15 @@ public class GameManager : MonoBehaviour
     internal void SetSpinSpeed(SpinSpeed speed)
     {
         currentSpinSpeed = speed;
+
+        // If currently stopping and user switches to QuickSpin, immediately trigger QuickStop
+        if (currentState == GameState.Stopping && speed == SpinSpeed.QuickSpin)
+        {
+            if (slotView != null && lastResult != null && lastResult.resultMatrix != null)
+            {
+                slotView.QuickStop(lastResult.resultMatrix);
+            }
+        }
     }
 
     #endregion

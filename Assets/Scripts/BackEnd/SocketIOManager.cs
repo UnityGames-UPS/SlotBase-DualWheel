@@ -295,7 +295,7 @@ public class SocketIOManager : MonoBehaviour
 
     private void OnResultReceived(string jsonData)
     {
-        if (!jsonData.Contains("\"id\":\"ResultData\""))
+        if (!jsonData.Contains("\"id\":\"spinResult\"") && !jsonData.Contains("\"id\":\"ResultData\""))
         {
             return;
         }
@@ -633,8 +633,9 @@ public class SocketIOManager : MonoBehaviour
     #endregion
     private List<List<int>> GenerateRandomMatrix(int rowCount)
     {
+        int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         var matrix = new List<List<int>>();
-        for (int col = 0; col < 5; col++)
+        for (int col = 0; col < reelCount; col++)
         {
             var column = new List<int>();
             for (int row = 0; row < rowCount; row++)

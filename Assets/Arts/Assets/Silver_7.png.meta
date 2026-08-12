@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 626a71f44c1c84fc293a0fce99f61dd8
+guid: b70ac6b348a304e6db57e0f778f95f86
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5670761085760201887
-    second: Bar 2_0
+      213: -5204568277261076196
+    second: Silver_7_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Bar 2_0
+      name: Silver_7_0
       rect:
         serializedVersion: 2
-        x: 14
+        x: 15
         y: 8
-        width: 262
-        height: 159
+        width: 271
+        height: 283
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f9468da992792be40800000000000000
-      internalID: 5670761085760201887
+      spriteID: c1936901ab8a5c7b0800000000000000
+      internalID: -5204568277261076196
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Bar 2_0: 5670761085760201887
+      Silver_7_0: -5204568277261076196
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

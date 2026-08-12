@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 25e654ac18e78424aa9cfab8bfef1bd2
+guid: 12992bcdf4b1b4a138d817b023aff2ff
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3737897332693287829
-    second: Bar_0
+      213: 8629311839640044519
+    second: 2X_Diamond_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Bar_0
+      name: 2X_Diamond_0
       rect:
         serializedVersion: 2
         x: 14
-        y: 92
-        width: 272
-        height: 117
+        y: 58
+        width: 271
+        height: 184
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5934012e1ddafd330800000000000000
-      internalID: 3737897332693287829
+      spriteID: 7e341d9e56971c770800000000000000
+      internalID: 8629311839640044519
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Bar_0: 3737897332693287829
+      2X_Diamond_0: 8629311839640044519
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

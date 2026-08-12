@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 25e654ac18e78424aa9cfab8bfef1bd2
+guid: 33b227d6ea4014f13a00ca4f58f30c81
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3737897332693287829
-    second: Bar_0
+      213: 915319718662136835
+    second: Red_wheel_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Bar_0
+      name: Red_wheel_0
       rect:
         serializedVersion: 2
-        x: 14
-        y: 92
-        width: 272
-        height: 117
+        x: 10
+        y: 32
+        width: 280
+        height: 235
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5934012e1ddafd330800000000000000
-      internalID: 3737897332693287829
+      spriteID: 30464ce3f6ed3bc00800000000000000
+      internalID: 915319718662136835
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Bar_0: 3737897332693287829
+      Red_wheel_0: 915319718662136835
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

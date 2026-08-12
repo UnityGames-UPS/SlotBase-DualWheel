@@ -1448,6 +1448,26 @@ public class UIManager : MonoBehaviour
         StartCoroutine(USpinBonusSequence(resultData, onComplete));
     }
 
+    internal void TriggerDualWheelsBonus(DualWheelsBonusData bonusData, System.Action onComplete)
+    {
+        if (bonusData == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        USpinResultData wheelData = new USpinResultData
+        {
+            triggered = bonusData.isTriggered,
+            winInCash = bonusData.totalWinAmount,
+            multiplierAwarded = bonusData.greenWheelValue > 0 ? bonusData.greenWheelValue : bonusData.redWheelValue,
+            type = "MULTIPLIER",
+            sliceIndex = 0
+        };
+
+        StartCoroutine(USpinBonusSequence(wheelData, onComplete));
+    }
+
     private bool wheelSpinTriggered = false;
 
     private void OnWheelSpinClicked()
