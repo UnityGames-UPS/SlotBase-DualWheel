@@ -33,14 +33,6 @@ public class GameManager : MonoBehaviour
     internal bool isAutoPlaying;
     internal int autoPlayTotalRounds;
     internal int autoPlayRemainingRounds;
-    internal bool wasAutoPlayingBeforeFreeSpins;
-    internal int savedAutoPlayRemainingRounds;
-    internal int savedAutoPlayTotalRounds;
-
-    internal bool isInFreeSpins;
-    internal int freeSpinsRemaining;
-    internal int freeSpinsUsed;
-    internal bool waitingForFreeSpinStart;
 
     internal bool isInitialized;
     internal bool initializationFailed;
@@ -55,7 +47,6 @@ public class GameManager : MonoBehaviour
     {
         currentState = GameState.Initializing;
         currentSpinSpeed = SpinSpeed.Normal;
-        waitingForFreeSpinStart = false;
         isInitialized = false;
         initializationFailed = false;
     }
@@ -154,13 +145,11 @@ public class GameManager : MonoBehaviour
     
     internal void RequestSpin()
     {
-        if (waitingForFreeSpinStart) return;
-
         if (currentState != GameState.Idle) return;
         if (!socketManager.isConnected) return;
 
         double totalPay = GetTotalPay();
-        if (!isInFreeSpins && playerData.balance < totalPay)
+        if (playerData.balance < totalPay)
         {
             if (popupManager != null)
             {
@@ -180,7 +169,7 @@ public class GameManager : MonoBehaviour
             {
                 StopAutoPlay();
             }
-            else if (!isInFreeSpins)
+            else
             {
                 stopRequested = true;
                 uiManager.DisableSpinButtonDuringStop();
@@ -199,12 +188,9 @@ public class GameManager : MonoBehaviour
         currentState = GameState.Spinning;
         stopRequested = false;
 
-        // Deduct total pay from balance on spin start (except in free spins)
-        if (!isInFreeSpins)
-        {
-            playerData.balance -= GetTotalPay();
-            if (playerData.balance < 0) playerData.balance = 0;
-        }
+        // Deduct total pay from balance on spin start
+        playerData.balance -= GetTotalPay();
+        if (playerData.balance < 0) playerData.balance = 0;
 
         uiManager.OnSpinStarted();
 
@@ -213,7 +199,7 @@ public class GameManager : MonoBehaviour
             slotView.StartSpin();
         }
 
-        socketManager.SendSpinRequest(currentBetIndex, isInFreeSpins);
+        socketManager.SendSpinRequest(currentBetIndex);
 
         if (spinCoroutine != null)
             StopCoroutine(spinCoroutine);
@@ -379,17 +365,7 @@ public class GameManager : MonoBehaviour
             yield break;
         }
 
-        if (lastResult != null && lastResult.moneyBagData != null && lastResult.moneyBagData.triggered)
-        {
-            yield return StartCoroutine(DelayMoneyBagTriggerResult());
-            yield break;
-        }
 
-        if (lastResult != null && lastResult.freeSpinData != null && lastResult.freeSpinData.isTriggered && !isInFreeSpins)
-        {
-            yield return StartCoroutine(DelayScatterTriggerResult());
-            yield break;
-        }
 
         ResumeAfterSpecialFeature();
     }
@@ -420,7 +396,7 @@ public class GameManager : MonoBehaviour
 
     private void ResumeAfterSpecialFeature()
     {
-        if (isAutoPlaying || isInFreeSpins)
+        if (isAutoPlaying)
         {
             StartCoroutine(DelayBeforeNextRound());
         }
@@ -474,26 +450,7 @@ public class GameManager : MonoBehaviour
         });
     }
 
-    private IEnumerator DelayMoneyBagTriggerResult()
-    {
-        AudioManager.Instance?.Play3UspinWinLineLoop();
 
-        if (slotView != null)
-        {
-            slotView.AnimateMoneyBagWin();
-        }
-
-        yield return new WaitForSeconds(3.5f);
-
-        uiManager.TriggerMoneyBagBonus(lastResult.moneyBagData, () =>
-        {
-            if (lastResult != null && lastResult.moneyBagData != null)
-            {
-                lastResult.moneyBagData.triggered = false;
-            }
-            ResumeAfterSpecialFeature();
-        });
-    }
 
     private IEnumerator DelayBeforeNextRound()
     {
@@ -524,24 +481,6 @@ public class GameManager : MonoBehaviour
     {
         lastResult = result;
 
-        // CRITICAL FIX: Update free spin counter IMMEDIATELY when server response arrives
-        // This ensures the display shows the exact server-authoritative played count without lag
-        if (isInFreeSpins && result.serverSpinsRemaining >= 0)
-        {
-            freeSpinsRemaining = result.serverSpinsRemaining;
-            freeSpinsUsed = result.serverSpinsUsed;
-            int displayTotalSpins = result.serverTotalSpins;
-
-            if (result.uSpinData != null && result.uSpinData.triggered && result.uSpinData.freeGamesAwarded > 0)
-            {
-                // Defer adding the newly won free spins to total count until wheel spin completes and user presses Take!
-                displayTotalSpins -= result.uSpinData.freeGamesAwarded;
-                freeSpinsRemaining -= result.uSpinData.freeGamesAwarded;
-            }
-
-            uiManager.UpdateFreeSpinCount(freeSpinsUsed, displayTotalSpins);
-        }
-
         if (result.winLines != null)
         {
             for (int i = 0; i < result.winLines.Count; i++)
@@ -558,31 +497,9 @@ public class GameManager : MonoBehaviour
 
         uiManager.OnSpinCompleted(lastResult);
 
-        // Extract server-authoritative values before nullifying lastResult
-        int serverSpinsRemaining = lastResult.serverSpinsRemaining;
-        int serverSpinsUsed = lastResult.serverSpinsUsed;
-        double serverTotalRoundWin = lastResult.serverTotalRoundWin;
-        bool isRoundOver = lastResult.isRoundOver;
-
-        // Note: freeSpinsRemaining already updated in OnSpinResultReceived
-        // Keeping this for safety in case OnSpinResultReceived wasn't called
-        if (isInFreeSpins && freeSpinsRemaining != serverSpinsRemaining)
-        {
-            freeSpinsRemaining = serverSpinsRemaining;
-        }
-
-
-        // Check if free spins were just triggered (initial trigger from base game)
-        if (lastResult.freeSpinData != null && lastResult.freeSpinData.isTriggered && !isInFreeSpins)
-        {
-            StartFreeSpins(lastResult.freeSpinData.spinsAwarded);
-            lastResult = null;
-            return;
-        }
-
         lastResult = null;
 
-        if (isAutoPlaying && !isInFreeSpins)
+        if (isAutoPlaying)
         {
             if (autoPlayTotalRounds != -1)
             {
@@ -612,22 +529,6 @@ public class GameManager : MonoBehaviour
                     currentState = GameState.Idle;
                     RequestSpin();
                 }
-            }
-        }
-        else if (isInFreeSpins)
-        {
-            // Free spin counter already updated in OnSpinResultReceived
-            // No need to update again here
-
-            if (isRoundOver || freeSpinsRemaining <= 0)
-            {
-                // Always use server-authoritative spinsUsed
-                EndFreeSpins(serverTotalRoundWin, serverSpinsUsed);
-            }
-            else
-            {
-                currentState = GameState.Idle;
-                StartCoroutine(DelayBeforeNextFreeSpin());
             }
         }
         else
@@ -675,7 +576,6 @@ public class GameManager : MonoBehaviour
         isAutoPlaying = true;
         autoPlayTotalRounds = rounds;
         autoPlayRemainingRounds = rounds;
-        wasAutoPlayingBeforeFreeSpins = false;
 
         uiManager.OnAutoPlayStarted();
         RequestSpin();
@@ -685,108 +585,22 @@ public class GameManager : MonoBehaviour
     {
         isAutoPlaying = false;
         autoPlayRemainingRounds = 0;
-        wasAutoPlayingBeforeFreeSpins = false;
 
         uiManager.OnAutoPlayStopped();
     }
 
     internal bool ShouldResumeAutoPlay()
     {
-        return wasAutoPlayingBeforeFreeSpins && (savedAutoPlayTotalRounds == -1 || savedAutoPlayRemainingRounds > 0);
+        return false;
     }
 
     internal void ResumeAutoPlay()
     {
-        if (!ShouldResumeAutoPlay()) return;
-
-        int remaining = savedAutoPlayRemainingRounds;
-        int total = savedAutoPlayTotalRounds;
-        wasAutoPlayingBeforeFreeSpins = false;
-
-        if (currentState != GameState.Idle) return;
-
-        double totalPay = GetTotalPay();
-        if (playerData.balance < totalPay)
-        {
-            if (popupManager != null) popupManager.ShowInsufficientFundsError();
-            return;
-        }
-
-        isAutoPlaying = true;
-        autoPlayTotalRounds = total;
-        autoPlayRemainingRounds = remaining;
-
-        uiManager.OnAutoPlayStarted();
-        RequestSpin();
     }
 
     #endregion
 
-    #region Free Spins
 
-    private void StartFreeSpins(int spins)
-    {
-        isInFreeSpins = true;
-        freeSpinsRemaining = spins;
-        freeSpinsUsed = 0;
-        waitingForFreeSpinStart = true;
-        AudioManager.Instance?.PlayFreeSpinBg();
-
-        int prevTotal = autoPlayTotalRounds;
-        int prevRemaining = autoPlayRemainingRounds;
-
-        if (isAutoPlaying)
-        {
-            StopAutoPlay();
-            wasAutoPlayingBeforeFreeSpins = true;
-            savedAutoPlayTotalRounds = prevTotal;
-            savedAutoPlayRemainingRounds = (prevTotal != -1) ? (prevRemaining - 1) : -1;
-        }
-
-        uiManager.OnFreeSpinsStarted(spins);
-
-        currentState = GameState.Idle;
-    }
-
-    internal void StartFirstFreeSpin()
-    {
-        waitingForFreeSpinStart = false;
-
-        StartCoroutine(DelayBeforeFirstFreeSpin());
-    }
-
-
-    private IEnumerator DelayBeforeFirstFreeSpin()
-    {
-        yield return new WaitForSeconds(0.5f);
-        RequestSpin();
-    }
-
-    private IEnumerator DelayBeforeNextFreeSpin()
-    {
-        yield return new WaitForSeconds(0.3f);
-
-        // Wait for special win popup if it's still active or pending
-        while (waitingForSpecialWin || uiManager.IsSpecialWinActive)
-        {
-            yield return null;
-        }
-
-        RequestSpin();
-    }
-
-    private void EndFreeSpins(double totalRoundWin, int totalSpinsUsed)
-    {
-        isInFreeSpins = false;
-        freeSpinsRemaining = 0;
-        AudioManager.Instance?.PlayMainBg();
-
-        uiManager.OnFreeSpinsEnded(totalRoundWin, totalSpinsUsed);
-
-        currentState = GameState.Idle;
-    }
-
-    #endregion
 
     #region Connection Events
 
@@ -798,7 +612,6 @@ public class GameManager : MonoBehaviour
             spinCoroutine = null;
         }
 
-        wasAutoPlayingBeforeFreeSpins = false;
         if (isAutoPlaying)
         {
             StopAutoPlay();

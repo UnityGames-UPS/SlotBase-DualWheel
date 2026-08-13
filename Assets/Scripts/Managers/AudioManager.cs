@@ -262,11 +262,9 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    // 11. FreeSpin BG (loop while free spin)
+    // 11. FreeSpin BG (no-op)
     internal void PlayFreeSpinBg()
     {
-        if (clipFreeSpinBg == null) return;
-        PlayLoop(bgMusicSource, clipFreeSpinBg);
     }
 
     // 12. Bonus Wheel Spin Segment Tick

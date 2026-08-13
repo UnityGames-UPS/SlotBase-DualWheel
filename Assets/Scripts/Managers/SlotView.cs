@@ -866,13 +866,7 @@ public class SlotView : MonoBehaviour
         }
     }
 
-    internal void AnimateMoneyBagWin()
-    {
-        if (currentDisplayMatrix == null) return;
 
-        KillWinTweens();
-        AudioManager.Instance?.PlayWinLinePhase1Start();
-    }
 
     private void AnimateSymbolSingleLoop(int column, int row, int loopCount = 1)
     {
@@ -1008,14 +1002,12 @@ public class SlotView : MonoBehaviour
         // Invoke onComplete immediately after Phase 1 so game logic (Free Spins / Autoplay / Win complete) can proceed
         onComplete?.Invoke();
 
-        // Skip Phase 2 if in Free Spins, Autoplay, or if a Special Feature (USpin, MoneyBag, Scatter trigger) was triggered
+        // Skip Phase 2 if in Autoplay, or if a Special Feature (USpin) was triggered
         bool hasSpecialFeature = (gameManager != null && gameManager.lastResult != null && (
-            (gameManager.lastResult.uSpinData != null && gameManager.lastResult.uSpinData.triggered) ||
-            (gameManager.lastResult.moneyBagData != null && gameManager.lastResult.moneyBagData.triggered) ||
-            (gameManager.lastResult.freeSpinData != null && gameManager.lastResult.freeSpinData.isTriggered)
+            (gameManager.lastResult.uSpinData != null && gameManager.lastResult.uSpinData.triggered)
         ));
 
-        bool skipPhase2 = (gameManager != null && (gameManager.isInFreeSpins || gameManager.isAutoPlaying)) || hasSpecialFeature;
+        bool skipPhase2 = (gameManager != null && gameManager.isAutoPlaying) || hasSpecialFeature;
         if (skipPhase2)
         {
             yield break;
@@ -1055,7 +1047,7 @@ public class SlotView : MonoBehaviour
 
         int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         int rowLimit = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.rowCount : 3;
-        int loopCountTarget = (gameManager != null && (gameManager.isInFreeSpins || gameManager.isAutoPlaying)) ? 1 : winSymbolLoopCount;
+        int loopCountTarget = (gameManager != null && gameManager.isAutoPlaying) ? 1 : winSymbolLoopCount;
 
         List<ImageAnimation> activeAnims = new List<ImageAnimation>();
         int completedCount = 0;
@@ -1361,7 +1353,7 @@ public class SlotView : MonoBehaviour
             imageAnim.StartAnimation();
         });
 
-        int loopCount = (gameManager != null && (gameManager.isInFreeSpins || gameManager.isAutoPlaying)) ? 1 : winSymbolLoopCount;
+        int loopCount = (gameManager != null && gameManager.isAutoPlaying) ? 1 : winSymbolLoopCount;
         seq.AppendInterval(winSymbolLoopDuration * loopCount);
 
         seq.AppendCallback(() => {

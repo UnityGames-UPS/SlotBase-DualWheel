@@ -397,7 +397,7 @@ public class SpinResult
 
     public double GetMoneyBagWin()
     {
-        return (moneyBagData != null && moneyBagData.triggered) ? moneyBagData.winInCash : 0;
+        return 0;
     }
 
     public double GetUSpinCashWin()
@@ -407,7 +407,7 @@ public class SpinResult
 
     public double GetTotalFeatureDeferredWins()
     {
-        return GetDualWheelsWin() + GetMoneyBagWin() + GetUSpinCashWin();
+        return GetDualWheelsWin() + GetUSpinCashWin();
     }
 }
 

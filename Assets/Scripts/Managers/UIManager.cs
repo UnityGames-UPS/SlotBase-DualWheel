@@ -58,8 +58,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button wheelSpinButtonPortrait2;
     [SerializeField] private Transform wheelTitleTransformPortrait;
     
-    [Header("Money Bag Bonus")]
-    [SerializeField] private MoneyBagController moneyBagController;
+
 
     [Header("Universal Win Popup")]
     [SerializeField] private GameObject universalWinPopup;
@@ -207,10 +206,6 @@ public class UIManager : MonoBehaviour
 
     private Tween balanceTween;
     private Tween winTween;
-    private double totalFreeSpinWin = 0;
-    private int totalFreeSpinsAwarded = 0;
-
-    private int initialFreeSpins = 0;
 
     // Optimistic balance: the locally-deducted balance shown while the spin is in flight
     private double optimisticBalance = 0;
@@ -580,16 +575,9 @@ public class UIManager : MonoBehaviour
     {
         AudioManager.Instance?.PlaySpinStart();
 
-        if (gameManager.isInFreeSpins)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
-        }
-        else
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
-            SetBetControlsEnabled(false);
-            SetButtonInteractable(settingsOpenButton, settingsOpenButtonPortrait, true);
-        }
+        SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
+        SetBetControlsEnabled(false);
+        SetButtonInteractable(settingsOpenButton, settingsOpenButtonPortrait, true);
 
         UpdateBalanceDisplay();
         UpdateWinDisplay(0);
@@ -599,18 +587,7 @@ public class UIManager : MonoBehaviour
 
     internal void OnSpinResultReceived()
     {
-        if (gameManager.isAutoPlaying)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
-        }
-        else if (gameManager.isInFreeSpins)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
-        }
-        else
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
-        }
+        SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
     }
 
     internal void OnSpinStopping(SpinResult result = null)
@@ -618,8 +595,7 @@ public class UIManager : MonoBehaviour
         UpdateBalanceDisplay();
         if (result != null)
         {
-            double displayWin = (gameManager != null && gameManager.isInFreeSpins) ? result.serverTotalRoundWin : result.winAmount;
-            UpdateWinDisplay(displayWin);
+            UpdateWinDisplay(result.winAmount);
         }
     }
 
@@ -627,18 +603,13 @@ public class UIManager : MonoBehaviour
     {
         if (result != null)
         {
-            double displayWin = (gameManager != null && gameManager.isInFreeSpins) ? result.serverTotalRoundWin : result.winAmount;
-            UpdateWinDisplay(displayWin);
+            UpdateWinDisplay(result.winAmount);
         }
         UpdateBalanceDisplay();
 
         if (gameManager.isAutoPlaying)
         {
             SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
-        }
-        else if (gameManager.isInFreeSpins)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
         }
         else
         {
@@ -668,10 +639,6 @@ public class UIManager : MonoBehaviour
         if (gameManager.isAutoPlaying)
         {
             SetSpinStopButtonStates(isSpinningState: true, isInteractable: true);
-        }
-        else if (gameManager.isInFreeSpins)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
         }
         else
         {
@@ -870,7 +837,7 @@ public class UIManager : MonoBehaviour
 
         bool isRoundActive = gameManager.IsSpinning() || gameManager.lastResult != null;
 
-        if (!isRoundActive && !gameManager.isInFreeSpins)
+        if (!isRoundActive)
         {
             SetSpinStopButtonStates(isSpinningState: false, isInteractable: true);
             SetBetControlsEnabled(true);
@@ -1125,86 +1092,18 @@ public class UIManager : MonoBehaviour
 
     internal void OnFreeSpinsStarted(int spins)
     {
-        OnFreeSpinsTriggered(spins);
     }
 
     internal void OnFreeSpinsTriggered(int spinsAwarded)
     {
-        ShowUniversalWinPopup(WinPopupType.FreeSpinTrigger, 0, spinsAwarded, () =>
-        {
-            StartFreeSpinsSequence(spinsAwarded);
-        });
-    }
-
-    private void StartFreeSpinsSequence(int spinsAwarded)
-    {
-        totalFreeSpinWin = 0;
-        initialFreeSpins = spinsAwarded;
-        totalFreeSpinsAwarded = spinsAwarded;
-        
-        if (gameLogoObject) gameLogoObject.SetActive(false);
-
-        UpdateFreeSpinCount(0, spinsAwarded);
-        UpdateWinDisplay(0);
-        gameManager.StartFirstFreeSpin();
     }
 
     internal void OnFreeSpinsEnded(double serverTotalRoundWin, int serverTotalSpinsUsed)
     {
-        initialFreeSpins = 0;
-        totalFreeSpinsAwarded = 0;
-
-        ShowUniversalWinPopup(WinPopupType.FreeSpinComplete, serverTotalRoundWin, 0, () =>
-        {
-            StartCoroutine(EndFreeSpinsTransitionSequence());
-        });
-    }
-
-    private IEnumerator EndFreeSpinsTransitionSequence()
-    {
-        // 1. Fade in back film
-        if (transitionBackFilm != null)
-        {
-            transitionBackFilm.gameObject.SetActive(true);
-            transitionBackFilm.alpha = 0f;
-            yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-            yield return new WaitForSeconds(0.2f);
-        }
-
-        // 2. Setup main slot UI state behind back film
-        if (freeSpinCountContainer) freeSpinCountContainer.SetActive(false);
-        if (gameLogoObject) gameLogoObject.SetActive(true);
-
-        // Reset win display for base game after free spins end
-        UpdateWinDisplay(0);
-
-        SetSpinStopButtonStates(isSpinningState: false, isInteractable: true);
-        SetButtonInteractable(settingsOpenButton, settingsOpenButtonPortrait, true);
-        SetBetControlsEnabled(true);
-
-        // 3. Fade out back film
-        if (transitionBackFilm != null)
-        {
-            yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-            transitionBackFilm.gameObject.SetActive(false);
-        }
-
-        // 4. Resume autoplay if it was active before free spins and has leftover rounds
-        if (gameManager != null && gameManager.ShouldResumeAutoPlay())
-        {
-            gameManager.ResumeAutoPlay();
-        }
     }
 
     internal void UpdateFreeSpinCount(int playedSpins, int totalSpins = -1)
     {
-        if (totalSpins > 0)
-        {
-            totalFreeSpinsAwarded = totalSpins;
-        }
-
-        if (freeSpinCountContainer) freeSpinCountContainer.SetActive(true);
-        if (remainingFreeSpinsText) remainingFreeSpinsText.text = $"FREE GAME  {playedSpins}  OF  {totalFreeSpinsAwarded}";
     }
 
     #endregion
@@ -1322,7 +1221,7 @@ public class UIManager : MonoBehaviour
         if (winAmountText) winAmountText.text = FormatAmount(amount);
         if (winAmountTextPortrait) winAmountTextPortrait.text = "WIN " + FormatAmount(amount);
 
-        bool showWinText = amount > 0 || (gameManager != null && gameManager.isInFreeSpins);
+        bool showWinText = amount > 0;
 
         if (showWinText)
         {
@@ -1528,80 +1427,7 @@ public class UIManager : MonoBehaviour
         yield return new WaitUntil(() => mainSpinDone);
         yield return new WaitForSeconds(0.5f);
 
-        // 6. Handle the two possibilities
-        if (resultData.type == "FREE_GAMES")
-        {
-            // Show freespin trigger popup BEFORE backfilm transition
-            bool takePressed = false;
-            ShowUniversalWinPopup(WinPopupType.FreeSpinTrigger, 0, resultData.freeGamesAwarded, () =>
-            {
-                takePressed = true;
-            });
-            yield return new WaitUntil(() => takePressed);
-
-            // Blackfilm transition fade in to cover the screen
-            if (transitionBackFilm != null)
-            {
-                transitionBackFilm.gameObject.SetActive(true);
-                transitionBackFilm.alpha = 0f;
-                yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-                yield return new WaitForSeconds(0.5f);
-            }
-            
-            // Turn off wheel screen behind blackfilm
-            StopWheelBonusEffects();
-            if (wheelScreen) wheelScreen.SetActive(false);
-            
-            // Setup free spin mode/UI behind blackfilm
-            if (gameManager != null)
-            {
-                if (gameManager.isInFreeSpins)
-                {
-                    gameManager.freeSpinsRemaining += resultData.freeGamesAwarded;
-                    int updatedTotalSpins = totalFreeSpinsAwarded + resultData.freeGamesAwarded;
-                    UpdateFreeSpinCount(gameManager.freeSpinsUsed, updatedTotalSpins);
-                }
-                else
-                {
-                    if (gameManager.isAutoPlaying)
-                    {
-                        int prevTotal = gameManager.autoPlayTotalRounds;
-                        int prevRemaining = gameManager.autoPlayRemainingRounds;
-                        gameManager.StopAutoPlay();
-                        gameManager.wasAutoPlayingBeforeFreeSpins = true;
-                        gameManager.savedAutoPlayTotalRounds = prevTotal;
-                        gameManager.savedAutoPlayRemainingRounds = (prevTotal != -1) ? (prevRemaining - 1) : -1;
-                    }
-
-                    gameManager.isInFreeSpins = true;
-                    gameManager.freeSpinsRemaining = resultData.freeGamesAwarded;
-                    gameManager.freeSpinsUsed = 0;
-                    initialFreeSpins = resultData.freeGamesAwarded;
-                    totalFreeSpinsAwarded = resultData.freeGamesAwarded;
-                    
-                    if (gameLogoObject) gameLogoObject.SetActive(false);
-                    UpdateFreeSpinCount(0, resultData.freeGamesAwarded);
-                    UpdateWinDisplay(0);
-                    
-                    SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
-                    SetBetControlsEnabled(false);
-                    SetButtonInteractable(settingsOpenButton, settingsOpenButtonPortrait, true);
-
-                    if (gameManager.lastResult != null && gameManager.lastResult.freeSpinData != null)
-                    {
-                        gameManager.lastResult.freeSpinData.isTriggered = false;
-                    }
-                }
-            }
-
-            // Blackfilm transition fade out revealing free spin setup
-            if (transitionBackFilm != null)
-            {
-                yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-                transitionBackFilm.gameObject.SetActive(false);
-            }
-        }
-        else // MULTIPLIER / CREDITS
+        // 6. Handle result (Multiplier / Cash Win)
         {
             bool takePressed = false;
             ShowUniversalWinPopup(WinPopupType.RegularWin, resultData.winInCash, 0, () =>
@@ -1615,9 +1441,7 @@ public class UIManager : MonoBehaviour
                 double prevBalance = gameManager.playerData.balance;
                 gameManager.playerData.balance += resultData.winInCash;
 
-                double targetWin = gameManager.isInFreeSpins
-                    ? gameManager.lastResult.serverTotalRoundWin
-                    : (gameManager.lastResult.grandTotalWin > 0 ? gameManager.lastResult.grandTotalWin : (gameManager.lastResult.winAmount + resultData.winInCash));
+                double targetWin = gameManager.lastResult.grandTotalWin > 0 ? gameManager.lastResult.grandTotalWin : (gameManager.lastResult.winAmount + resultData.winInCash);
                 AnimateWinUpdate(targetWin);
                 AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
             }
@@ -1642,109 +1466,7 @@ public class UIManager : MonoBehaviour
 
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
         SetButtonActive(wheelSpinButton2, wheelSpinButtonPortrait2, false);
-        if (gameManager == null || !gameManager.isInFreeSpins)
-        {
-            if (gameManager != null && gameManager.isAutoPlaying)
-            {
-                OnAutoPlayStarted();
-            }
-            else
-            {
-                SetSpinStopButtonStates(isSpinningState: false, isInteractable: true);
-            }
-        }
-        else
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
-        }
-
-        onComplete?.Invoke();
-    }
-
-    internal void TriggerMoneyBagBonus(MoneyBagResultData resultData, System.Action onComplete)
-    {
-        StartCoroutine(MoneyBagBonusSequence(resultData, onComplete));
-    }
-
-    private IEnumerator MoneyBagBonusSequence(MoneyBagResultData resultData, System.Action onComplete)
-    {
-        if (transitionBackFilm != null)
-        {
-            transitionBackFilm.gameObject.SetActive(true);
-            transitionBackFilm.alpha = 0f;
-            yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-            yield return new WaitForSeconds(0.5f);
-        }
-        
-        SetButtonActive(autoSpinStopButton, autoSpinStopButtonPortrait, false);
-        SetButtonActive(stopButton, stopButtonPortrait, false);
-        SetButtonActive(spinButton, spinButtonPortrait, true);
-        SetButtonInteractable(spinButton, spinButtonPortrait, false);
-
-        bool moneyBagDone = false;
-        
-        if (moneyBagController != null)
-        {
-            moneyBagController.gameObject.SetActive(true);
-            moneyBagController.StartMoneyBagBonus(resultData, () => moneyBagDone = true);
-
-            if (transitionBackFilm != null)
-            {
-                yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-                transitionBackFilm.gameObject.SetActive(false);
-            }
-
-            yield return new WaitUntil(() => moneyBagDone);
-
-            bool takePressed = false;
-            ShowUniversalWinPopup(WinPopupType.MoneyBagCollect, resultData.winInCash, 0, () =>
-            {
-                takePressed = true;
-            });
-            yield return new WaitUntil(() => takePressed);
-
-            if (gameManager != null && gameManager.lastResult != null)
-            {
-                double prevBalance = gameManager.playerData.balance;
-                gameManager.playerData.balance += resultData.winInCash;
-
-                double targetWin = gameManager.isInFreeSpins
-                    ? gameManager.lastResult.serverTotalRoundWin
-                    : (gameManager.lastResult.grandTotalWin > 0 ? gameManager.lastResult.grandTotalWin : (gameManager.lastResult.winAmount + resultData.winInCash));
-                AnimateWinUpdate(targetWin);
-                AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
-            }
-            
-            if (transitionBackFilm != null)
-            {
-                transitionBackFilm.gameObject.SetActive(true);
-                transitionBackFilm.alpha = 0f;
-                yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-                yield return new WaitForSeconds(0.5f);
-            }
-
-            if (moneyBagController != null)
-            {
-                moneyBagController.gameObject.SetActive(false);
-            }
-        }
-        else
-        {
-            moneyBagDone = true;
-            Debug.LogError("MoneyBagController is not assigned in UIManager!");
-        }
-
-        if (transitionBackFilm != null)
-        {
-            yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-            transitionBackFilm.gameObject.SetActive(false);
-        }
-
-        if (gameManager != null && gameManager.isInFreeSpins)
-        {
-            SetSpinStopButtonStates(isSpinningState: true, isInteractable: false);
-        }
-        else if (gameManager != null && gameManager.isAutoPlaying)
+        if (gameManager != null && gameManager.isAutoPlaying)
         {
             OnAutoPlayStarted();
         }
@@ -1755,6 +1477,8 @@ public class UIManager : MonoBehaviour
 
         onComplete?.Invoke();
     }
+
+
 
     #endregion
 
@@ -1820,15 +1544,7 @@ public class UIManager : MonoBehaviour
                 }
                 break;
 
-            case WinPopupType.MoneyBagCollect:
-                if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(true);
-                if (uwpYouWonSubtitle) uwpYouWonSubtitle.SetActive(true);
-                if (uwpWinAmountText)
-                {
-                    uwpWinAmountText.gameObject.SetActive(true);
-                    uwpWinAmountText.text = FormatAmount(winAmount);
-                }
-                break;
+
 
             case WinPopupType.FreeSpinComplete:
                 if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(true);

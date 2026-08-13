@@ -547,9 +547,9 @@ public class SocketIOManager : MonoBehaviour
 
     #region Spin Request
 
-    internal void SendSpinRequest(int betIndex, bool isFreeSpin)
+    internal void SendSpinRequest(int betIndex)
     {
-        Debug.Log($"[SocketIO] Spin request: betIndex={betIndex}, isFreeSpin={isFreeSpin}");
+        Debug.Log($"[SocketIO] Spin request: betIndex={betIndex}");
 
         var request = new SpinRequest
         {
@@ -557,7 +557,7 @@ public class SocketIOManager : MonoBehaviour
             payload = new SpinPayload
             {
                 betIndex = betIndex,
-                isFreeSpin = isFreeSpin
+                isFreeSpin = false
             }
         };
 
