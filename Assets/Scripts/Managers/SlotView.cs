@@ -100,6 +100,23 @@ public class SlotView : MonoBehaviour
     [Header("Symbol Info Card")]
     [SerializeField] private SymbolInfoCard symbolInfoCard;
 
+    [Header("Cylindrical Spin Effect Settings")]
+    [SerializeField] private bool enableCylindricalEffect = true;
+    [Tooltip("Optional parent RectTransform reference (e.g. reel viewport frame) to automatically measure visible half height from parent rect height.")]
+    [SerializeField] private RectTransform visibleAreaRectTransform;
+    [SerializeField] private float leftReelEdgeX = 70f;
+    [SerializeField] private float rightReelEdgeX = -70f;
+    [SerializeField] private float leftReelOuterX = 105f;
+    [SerializeField] private float rightReelOuterX = -105f;
+    [SerializeField] private float edgeScale = 0.94f;
+    [SerializeField] private float outerScale = 0.90f;
+    [SerializeField] private float visibleHalfHeight = 145f;
+    [SerializeField] private float outerHalfHeight = 220f;
+
+    private float[] reelCurveIntensity = new float[3] { 1f, 1f, 1f };
+    private Tween[] reelSettleCurveTweens = new Tween[3];
+    private Coroutine cylindricalEffectCoroutine;
+
 
     private float middlePosition = 0f;
     private float cycleDistance;
@@ -313,11 +330,19 @@ public class SlotView : MonoBehaviour
 
         for (int col = 0; col < reelCount; col++)
         {
+            if (col < reelCurveIntensity.Length && matrix[col] != null && matrix[col].Count >= 3)
+            {
+                bool isCase1 = matrix[col][1] != 0;
+                reelCurveIntensity[col] = isCase1 ? 1f : 0f;
+            }
+
             if (col < reelImagesList.Count)
             {
                 SetReelSymbols(col, matrix[col], true);
             }
         }
+
+        UpdateCylindricalSpinEffect();
     }
 
     #endregion
@@ -452,7 +477,19 @@ public class SlotView : MonoBehaviour
         isSpinning = true;
         KillAllTweens();
 
+        for (int i = 0; i < reelCurveIntensity.Length; i++)
+        {
+            if (reelSettleCurveTweens[i] != null)
+            {
+                reelSettleCurveTweens[i].Kill();
+                reelSettleCurveTweens[i] = null;
+            }
+            reelCurveIntensity[i] = 1f;
+        }
+
         DisableAllOverlays();
+
+        StartCylindricalEffectCoroutine();
 
         for (int i = 0; i < reelCycleCount.Count; i++)
         {
@@ -609,6 +646,33 @@ public class SlotView : MonoBehaviour
 
         isSpinning = false;
 
+        // Explicitly kill and clear all spin & settle tweens after reel stop sequence completes
+        foreach (var tween in spinTweens)
+        {
+            tween?.Kill();
+        }
+        spinTweens.Clear();
+
+        if (reelSettleCurveTweens != null)
+        {
+            for (int i = 0; i < reelSettleCurveTweens.Length; i++)
+            {
+                if (reelSettleCurveTweens[i] != null)
+                {
+                    reelSettleCurveTweens[i].Kill();
+                    reelSettleCurveTweens[i] = null;
+                }
+            }
+        }
+
+        if (cylindricalEffectCoroutine != null)
+        {
+            StopCoroutine(cylindricalEffectCoroutine);
+            cylindricalEffectCoroutine = null;
+        }
+
+        UpdateCylindricalSpinEffect(force: true);
+
         onComplete?.Invoke();
     }
 
@@ -625,11 +689,36 @@ public class SlotView : MonoBehaviour
         }
 
         Transform slotTransform = reelTransforms[columnIndex];
+        slotTransform.DOKill();
 
         float targetY = GetTargetYForResult(targetSymbols);
 
         // Set target symbols & non-blank buffer images for active case
         SetReelSymbols(columnIndex, targetSymbols, false);
+
+        bool isCase1 = targetSymbols != null && targetSymbols.Count >= 3 && targetSymbols[1] != 0;
+        if (isCase1)
+        {
+            if (columnIndex < reelCurveIntensity.Length)
+            {
+                if (reelSettleCurveTweens[columnIndex] != null) reelSettleCurveTweens[columnIndex].Kill();
+                reelCurveIntensity[columnIndex] = 1f;
+            }
+        }
+        else
+        {
+            // Case 2: every icon at stop needs scale=1 and x=0
+            if (columnIndex < reelCurveIntensity.Length)
+            {
+                if (reelSettleCurveTweens[columnIndex] != null) reelSettleCurveTweens[columnIndex].Kill();
+                float settleDuration = isQuickStop ? (quickStopDuration * 0.7f) : stopSettleDuration;
+                int colIdx = columnIndex;
+                reelSettleCurveTweens[colIdx] = DOVirtual.Float(reelCurveIntensity[colIdx], 0f, settleDuration, (val) => {
+                    if (colIdx < reelCurveIntensity.Length) reelCurveIntensity[colIdx] = val;
+                });
+            }
+            StartCylindricalEffectCoroutine();
+        }
 
         // Snap transform to landing start point above targetY for smooth deceleration ease down to targetY
         float landingStartTopY = targetY + (2f * symbolHeight);
@@ -1472,8 +1561,160 @@ public class SlotView : MonoBehaviour
         }
         spinTweens.Clear();
 
+        if (reelSettleCurveTweens != null)
+        {
+            for (int i = 0; i < reelSettleCurveTweens.Length; i++)
+            {
+                if (reelSettleCurveTweens[i] != null)
+                {
+                    reelSettleCurveTweens[i].Kill();
+                    reelSettleCurveTweens[i] = null;
+                }
+            }
+        }
+
+        if (cylindricalEffectCoroutine != null)
+        {
+            StopCoroutine(cylindricalEffectCoroutine);
+            cylindricalEffectCoroutine = null;
+        }
+
         KillWinTweens();
     }
+
+    #region Cylindrical Spin Effect Coroutine
+
+    private bool IsAnySettleTweenActive()
+    {
+        if (reelSettleCurveTweens == null) return false;
+        for (int i = 0; i < reelSettleCurveTweens.Length; i++)
+        {
+            if (reelSettleCurveTweens[i] != null && reelSettleCurveTweens[i].IsActive() && reelSettleCurveTweens[i].IsPlaying())
+                return true;
+        }
+        return false;
+    }
+
+    private void StartCylindricalEffectCoroutine()
+    {
+        if (!enableCylindricalEffect) return;
+        if (cylindricalEffectCoroutine != null)
+        {
+            StopCoroutine(cylindricalEffectCoroutine);
+            cylindricalEffectCoroutine = null;
+        }
+        cylindricalEffectCoroutine = StartCoroutine(CylindricalSpinEffectRoutine());
+    }
+
+    private IEnumerator CylindricalSpinEffectRoutine()
+    {
+        while (isSpinning || IsAnySettleTweenActive())
+        {
+            UpdateCylindricalSpinEffect(force: false);
+            yield return null;
+        }
+        // Set final resting positions once when spin & settling finish
+        UpdateCylindricalSpinEffect(force: true);
+        cylindricalEffectCoroutine = null;
+    }
+
+    private void UpdateCylindricalSpinEffect(bool force = false)
+    {
+        if (!enableCylindricalEffect || reelTransforms == null || reelImagesList == null) return;
+
+        int maxCols = Mathf.Min(reelTransforms.Length, reelImagesList.Count);
+
+        float effectiveVisibleHalfHeight = visibleHalfHeight;
+        if (visibleAreaRectTransform != null && visibleAreaRectTransform.rect.height > 0)
+        {
+            effectiveVisibleHalfHeight = visibleAreaRectTransform.rect.height * 0.5f;
+        }
+        float effectiveOuterHalfHeight = Mathf.Max(outerHalfHeight, effectiveVisibleHalfHeight * 1.5f);
+
+        // Precalculate reciprocals to replace division with fast multiplication in loop
+        float invVisibleHalfHeight = 1f / Mathf.Max(1f, effectiveVisibleHalfHeight);
+        float invOuterRange = 1f / Mathf.Max(1f, effectiveOuterHalfHeight - effectiveVisibleHalfHeight);
+
+        for (int col = 0; col < maxCols; col++)
+        {
+            Transform slotTransform = reelTransforms[col];
+            if (slotTransform == null) continue;
+
+            var reel = reelImagesList[col];
+            if (reel == null || reel.images == null) continue;
+
+            float intensity = (col < reelCurveIntensity.Length) ? reelCurveIntensity[col] : 1f;
+
+            // Reference center image is 8th element (index 7)
+            float centerImageLocalY = (reel.images.Count > 7 && reel.images[7] != null) ? reel.images[7].rectTransform.localPosition.y : -305.5f;
+            float slotOffsetFromCase1 = slotTransform.localPosition.y - case1StopY;
+
+            int imgCount = reel.images.Count;
+            for (int i = 0; i < imgCount; i++)
+            {
+                Image img = reel.images[i];
+                if (img == null) continue;
+
+                RectTransform rect = img.rectTransform;
+                if (rect == null) continue;
+
+                // Vertical offset relative to Case 1 center position (Row 1)
+                float yRel = (rect.localPosition.y - centerImageLocalY) + slotOffsetFromCase1;
+                float absY = Mathf.Abs(yRel);
+
+                float targetX = 0f;
+                float targetScale = 1f;
+
+                if (absY <= effectiveVisibleHalfHeight)
+                {
+                    // Inside visible area (0 to effectiveVisibleHalfHeight)
+                    float t = absY * invVisibleHalfHeight;
+                    float curveFactor = t * t * intensity; // Multiply by intensity for Case 2 stop settling
+
+                    if (col == 0) // Left reel: curve outward to +70
+                    {
+                        targetX = Mathf.Lerp(0f, leftReelEdgeX, curveFactor);
+                    }
+                    else if (col == 2) // Right reel: curve outward to -70
+                    {
+                        targetX = Mathf.Lerp(0f, rightReelEdgeX, curveFactor);
+                    }
+
+                    targetScale = Mathf.Lerp(1f, edgeScale, curveFactor);
+                }
+                else
+                {
+                    // Outside visible area (entering diagonally from top / exiting to bottom)
+                    float extraT = Mathf.Clamp01((absY - effectiveVisibleHalfHeight) * invOuterRange);
+
+                    if (col == 0) // Left reel
+                    {
+                        targetX = Mathf.Lerp(leftReelEdgeX, leftReelOuterX, extraT) * intensity;
+                    }
+                    else if (col == 2) // Right reel
+                    {
+                        targetX = Mathf.Lerp(rightReelEdgeX, rightReelOuterX, extraT) * intensity;
+                    }
+
+                    targetScale = Mathf.Lerp(1f, Mathf.Lerp(edgeScale, outerScale, extraT), intensity);
+                }
+
+                Vector2 anchoredPos = rect.anchoredPosition;
+                if (force || !Mathf.Approximately(anchoredPos.x, targetX))
+                {
+                    rect.anchoredPosition = new Vector2(targetX, anchoredPos.y);
+                }
+
+                Vector3 localScale = rect.localScale;
+                if (force || !Mathf.Approximately(localScale.x, targetScale))
+                {
+                    rect.localScale = new Vector3(targetScale, targetScale, targetScale);
+                }
+            }
+        }
+    }
+
+    #endregion
 
     #region Blank Symbol Handling (Simplified 2-Case Architecture)
 
