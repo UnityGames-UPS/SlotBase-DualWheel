@@ -139,28 +139,28 @@ public class SymbolInfoCard : MonoBehaviour
 
         string symbolNameLower = symbolInfo != null ? (symbolInfo.name ?? "").ToLower() : "";
 
-        // Check if special symbol: Wild (ID 10), USpin (ID 11), MoneyBag (ID 12)
+        // Check if special symbol: Wild, Wheel/Spin (IDs 11, 12, 13, 14), MoneyBag
         bool isWild = (symbolId == 10) || (symbolInfo != null && symbolInfo.isWild) || symbolNameLower.Contains("wild");
-        bool isUSpin = (symbolId == 11) || symbolNameLower.Contains("uspin");
-        bool isMoneyBag = (symbolId == 12) || symbolNameLower.Contains("moneybag") || symbolNameLower.Contains("money bag");
+        bool isWheel = (symbolId >= 11 && symbolId <= 14) || symbolNameLower.Contains("wheel") || symbolNameLower.Contains("spin");
+        bool isMoneyBag = (symbolId == 15) || symbolNameLower.Contains("moneybag") || symbolNameLower.Contains("money bag");
 
-        if (isWild || isUSpin || isMoneyBag)
+        if (isWild || isWheel || isMoneyBag)
         {
             // SPECIAL SYMBOL: Text alignment CENTER
             infoText.alignment = TextAlignmentOptions.Center;
             infoText.enableWordWrapping = true;
-if (isUSpin)
-{
-    infoText.text = "3 U-Spin symbols trigger the Wheel Bonus feature.";
-}
-else if (isMoneyBag)
-{
-    infoText.text = "3 Money Bag symbols trigger the Money Bag Collect feature.";
-}
-else if (isWild)
-{
-    infoText.text = "Substitutes for all symbols except U-Spin and Money Bag.";
-}
+            if (isWheel)
+            {
+                infoText.text = "Wheel symbols trigger the Dual Wheel Bonus feature.";
+            }
+            else if (isMoneyBag)
+            {
+                infoText.text = "3 Money Bag symbols trigger the Money Bag Collect feature.";
+            }
+            else if (isWild)
+            {
+                infoText.text = "Substitutes for all symbols except Wheel and Money Bag.";
+            }
         }
         else
         {

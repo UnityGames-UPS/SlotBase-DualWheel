@@ -9,7 +9,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] internal UIManager uiManager;
     [SerializeField] private PopupManager popupManager;
     [SerializeField] private SlotView slotView;
-    [SerializeField] internal WheelSpinController wheelController;
+    [Header("Dual Wheel Controllers")]
+    [SerializeField] internal WheelSpinController redWheel;
+    [SerializeField] internal WheelSpinController greenWheel;
 
     [Header("Spin Settings")]
     [SerializeField] private float normalSpinDuration = 3.5f;
@@ -63,9 +65,9 @@ public class GameManager : MonoBehaviour
             slotView.SetInitialMatrix(initialMatrix);
         }
 
-        if (wheelController != null && gameConfig.uSpinSegments != null)
+        if (uiManager != null && gameConfig != null && gameConfig.dualWheels != null)
         {
-            wheelController.OverrideSegmentsWithData(gameConfig.uSpinSegments);
+            uiManager.SetupDualWheels(gameConfig.dualWheels);
         }
 
         isInitialized = true;
@@ -359,11 +361,7 @@ public class GameManager : MonoBehaviour
             yield break;
         }
 
-        if (lastResult != null && lastResult.uSpinData != null && lastResult.uSpinData.triggered)
-        {
-            yield return StartCoroutine(DelayUSpinTriggerResult());
-            yield break;
-        }
+
 
 
 
@@ -420,35 +418,7 @@ public class GameManager : MonoBehaviour
         ProcessSpinResult();
     }
 
-    private IEnumerator DelayUSpinTriggerResult()
-    {
-        AudioManager.Instance?.Play3UspinWinLineLoop();
 
-        bool animFinished = false;
-        if (slotView != null)
-        {
-            slotView.AnimateUSpinWin(() =>
-            {
-                animFinished = true;
-            });
-        }
-        else
-        {
-            animFinished = true;
-        }
-
-        yield return new WaitUntil(() => animFinished);
-
-        uiManager.TriggerUSpinBonus(lastResult.uSpinData, () =>
-        {
-            AudioManager.Instance?.Stop3UspinWinLineLoop();
-            if (lastResult != null && lastResult.uSpinData != null)
-            {
-                lastResult.uSpinData.triggered = false;
-            }
-            ResumeAfterSpecialFeature();
-        });
-    }
 
 
 

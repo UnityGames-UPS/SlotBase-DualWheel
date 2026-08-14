@@ -5,19 +5,10 @@ using DG.Tweening;
 using System;
 using TMPro;
 
-public enum WheelSegmentType
-{
-    Multiplier,
-    FreeGames
-}
-
 [Serializable]
 public class WheelSegmentData
 {
-    public WheelSegmentType type;
-    [Tooltip("Only for FreeGames type")] public string featureName; 
     public TextMeshProUGUI valueText;
-    
     [HideInInspector] public double assignedValue;
     public int serverIndex = -1;
 }
@@ -37,7 +28,7 @@ public class WheelSpinController : MonoBehaviour
 
     [Header("Text Alignment")]
     [SerializeField] private float textRadius = 250f;
-    [SerializeField] private bool faceOutward = true;
+    [SerializeField] private bool faceOutward = false;
 
     [Header("Spin Settings")]
     [SerializeField] private float spinDuration = 5f;
@@ -64,28 +55,19 @@ public class WheelSpinController : MonoBehaviour
         segmentAngle = 360f / segmentCount;
     }
 
-    public void OverrideSegmentsWithData(List<USpinSegment> serverSegments)
+    public void SetupWheelWithValues(List<double> values, int targetSegmentCount)
     {
-        if (serverSegments == null || segments == null) return;
+        if (values == null || values.Count == 0 || targetSegmentCount <= 0) return;
 
-        foreach (var serverSeg in serverSegments)
+        Initialize(targetSegmentCount);
+
+        if (segments == null) segments = new List<WheelSegmentData>();
+
+        for (int i = 0; i < segments.Count; i++)
         {
-            if (serverSeg.sliceIndex >= 0 && serverSeg.sliceIndex < segments.Count)
-            {
-                var localSeg = segments[serverSeg.sliceIndex];
-                localSeg.serverIndex = serverSeg.sliceIndex;
-                
-                if (serverSeg.type == "MULTIPLIER")
-                {
-                    localSeg.type = WheelSegmentType.Multiplier;
-                    localSeg.assignedValue = serverSeg.multiplier;
-                }
-                else if (serverSeg.type == "FREE_GAMES")
-                {
-                    localSeg.type = WheelSegmentType.FreeGames;
-                    localSeg.assignedValue = serverSeg.freeGames;
-                }
-            }
+            var localSeg = segments[i];
+            localSeg.serverIndex = i;
+            localSeg.assignedValue = values[i % values.Count];
         }
 
         // Re-align and re-format texts based on the new data
@@ -104,39 +86,29 @@ public class WheelSpinController : MonoBehaviour
             var segment = segments[i];
             if (segment.valueText == null) continue;
             
-            // Format text
-            if (segment.type == WheelSegmentType.Multiplier)
+            // Format text (Credit / Multiplier, e.g. "X10")
+            string valStr = "";
+            if (segment.assignedValue > 0)
             {
-                string valStr = "";
-                if (segment.assignedValue > 0)
-                {
-                    valStr = segment.assignedValue.ToString() + "X";
-                }
-                else
-                {
-                    string currentText = segment.valueText.text != null ? segment.valueText.text.Replace("\n", "").Replace("X", "").Trim() : "";
-                    if (string.IsNullOrEmpty(currentText) || currentText.Contains("Free") || currentText.Contains("<")) currentText = "20";
-                    valStr = currentText + "X";
-                }
-                
-                char[] chars = valStr.ToCharArray();
-                segment.valueText.text = string.Join("\n", chars);
+                valStr = "X" + segment.assignedValue.ToString();
             }
-            else if (segment.type == WheelSegmentType.FreeGames)
+            else
             {
-                segment.valueText.text = "<size= 30>Free</size>\nG\nA\nM\nE\nS";
+                string currentText = segment.valueText.text != null ? segment.valueText.text.Replace("\n", "").Replace("X", "").Trim() : "";
+                if (string.IsNullOrEmpty(currentText) || currentText.Contains("<")) currentText = "20";
+                valStr = "X" + currentText;
             }
             
-            // Position & Rotation
+            segment.valueText.text = valStr;
+            
+            // Position & Rotation (Right side of text facing wheel center)
             float angle = startOffsetAngle - (i * angleStep) - alignmentOffset;
             float rad = angle * Mathf.Deg2Rad;
             
             Vector3 localDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0);
             segment.valueText.rectTransform.localPosition = localDir * textRadius;
             
-            float zRot = angle - 90f;
-            if (!faceOutward) zRot += 180f; // Face inward
-            
+            float zRot = faceOutward ? angle : (angle + 180f); // angle + 180f aligns right side of text towards center hub
             segment.valueText.rectTransform.localRotation = Quaternion.Euler(0, 0, zRot);
         }
     }

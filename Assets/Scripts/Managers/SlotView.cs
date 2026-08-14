@@ -864,7 +864,7 @@ public class SlotView : MonoBehaviour
         }
     }
 
-    internal void AnimateUSpinWin(System.Action onComplete = null)
+    internal void AnimateDualWheelWin(System.Action onComplete = null)
     {
         if (currentDisplayMatrix == null)
         {
@@ -875,16 +875,17 @@ public class SlotView : MonoBehaviour
         KillWinTweens();
         AudioManager.Instance?.PlayWinLinePhase1Start();
 
-        List<ImageAnimation> activeUSpinAnims = new List<ImageAnimation>();
+        List<ImageAnimation> activeWheelAnims = new List<ImageAnimation>();
         int completedCount = 0;
-        int targetLoops = 2; // Exactly 2 loops of full animation
+        int targetLoops = 2;
 
         for (int col = 0; col < 5; col++)
         {
             if (col >= currentDisplayMatrix.Count) continue;
             for (int row = 0; row < currentDisplayMatrix[col].Count; row++)
             {
-                if (currentDisplayMatrix[col][row] == 11) // Spin/USpin Symbol ID
+                int symId = currentDisplayMatrix[col][row];
+                if (symId == 11 || symId == 12 || symId == 13 || symId == 14) // Spin/Wheel Symbol IDs
                 {
                     var animGO = WinBox(winAnimationColumns, col, row);
                     if (animGO != null)
@@ -897,9 +898,9 @@ public class SlotView : MonoBehaviour
 
                         if (imageAnim != null)
                         {
-                            activeUSpinAnims.Add(imageAnim);
+                            activeWheelAnims.Add(imageAnim);
 
-                            List<Sprite> animSprites = animationSpriteArrays[11];
+                            List<Sprite> animSprites = (animationSpriteArrays != null && symId >= 0 && symId < animationSpriteArrays.Length) ? animationSpriteArrays[symId] : null;
                             if (animSprites != null && animSprites.Count > 0)
                             {
                                 imageAnim.textureArray = animSprites;
@@ -935,7 +936,7 @@ public class SlotView : MonoBehaviour
                                     }
 
                                     completedCount++;
-                                    if (completedCount >= activeUSpinAnims.Count)
+                                    if (completedCount >= activeWheelAnims.Count)
                                     {
                                         onComplete?.Invoke();
                                     }
@@ -949,7 +950,7 @@ public class SlotView : MonoBehaviour
             }
         }
 
-        if (activeUSpinAnims.Count == 0)
+        if (activeWheelAnims.Count == 0)
         {
             onComplete?.Invoke();
         }
@@ -1091,9 +1092,9 @@ public class SlotView : MonoBehaviour
         // Invoke onComplete immediately after Phase 1 so game logic (Free Spins / Autoplay / Win complete) can proceed
         onComplete?.Invoke();
 
-        // Skip Phase 2 if in Autoplay, or if a Special Feature (USpin) was triggered
+        // Skip Phase 2 if in Autoplay, or if a Special Feature (Dual Wheels) was triggered
         bool hasSpecialFeature = (gameManager != null && gameManager.lastResult != null && (
-            (gameManager.lastResult.uSpinData != null && gameManager.lastResult.uSpinData.triggered)
+            (gameManager.lastResult.dualWheelsBonusData != null && gameManager.lastResult.dualWheelsBonusData.isTriggered)
         ));
 
         bool skipPhase2 = (gameManager != null && gameManager.isAutoPlaying) || hasSpecialFeature;

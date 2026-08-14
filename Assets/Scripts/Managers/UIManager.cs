@@ -39,11 +39,11 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject winTextObjectPortrait;
     [SerializeField] private GameObject goodLuckObjectPortrait;
 
-    [Header("Bonus Wheel")]
-    [SerializeField] private WheelSpinController mainWheel;
+    [Header("Bonus Wheels")]
+    [SerializeField] private WheelSpinController redWheel;
+    [SerializeField] private WheelSpinController greenWheel;
     [SerializeField] private GameObject wheelScreen;
     [SerializeField] private Button wheelSpinButton;
-    [SerializeField] private Button wheelSpinButton2;
     [SerializeField] private Transform wheelTitleTransform;
     [SerializeField] private List<Transform> wheelTitleObjects = new List<Transform>();
     [SerializeField] private CanvasGroup transitionBackFilm;
@@ -55,7 +55,6 @@ public class UIManager : MonoBehaviour
     private Dictionary<Transform, Vector3> wheelTitleInitialScales = new Dictionary<Transform, Vector3>();
     [Header("Bonus Wheel - Portrait")]
     [SerializeField] private Button wheelSpinButtonPortrait;
-    [SerializeField] private Button wheelSpinButtonPortrait2;
     [SerializeField] private Transform wheelTitleTransformPortrait;
     
 
@@ -289,8 +288,8 @@ public class UIManager : MonoBehaviour
         var oc = Object.FindFirstObjectByType<OrientationChange>();
         bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
 
-        if (wheelSpinButton2) wheelSpinButton2.gameObject.SetActive(!isPortraitMode);
-        if (wheelSpinButtonPortrait2) wheelSpinButtonPortrait2.gameObject.SetActive(isPortraitMode);
+        if (wheelSpinButton) wheelSpinButton.gameObject.SetActive(!isPortraitMode);
+        if (wheelSpinButtonPortrait) wheelSpinButtonPortrait.gameObject.SetActive(isPortraitMode);
     }
 
     private void InitializeUI()
@@ -316,7 +315,6 @@ public class UIManager : MonoBehaviour
         StopWheelBonusEffects();
         if (wheelScreen) wheelScreen.SetActive(false);
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
-        SetButtonActive(wheelSpinButton2, wheelSpinButtonPortrait2, false);
         if (transitionBackFilm) transitionBackFilm.gameObject.SetActive(false);
         UpdatePingDisplay("-- ms");
     }
@@ -454,9 +452,7 @@ public class UIManager : MonoBehaviour
         if (shrinkButtonPortrait) shrinkButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); OnShrink(); });
 
         if (wheelSpinButton) wheelSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
-        if (wheelSpinButton2) wheelSpinButton2.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
         if (wheelSpinButtonPortrait) wheelSpinButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
-        if (wheelSpinButtonPortrait2) wheelSpinButtonPortrait2.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
 
         // Take button for universal win popup
         if (uwpTakeButton) uwpTakeButton.onClick.AddListener(OnUniversalWinTakeButtonClicked);
@@ -1342,10 +1338,38 @@ public class UIManager : MonoBehaviour
 
     #region Bonus Game
 
-    internal void TriggerUSpinBonus(USpinResultData resultData, System.Action onComplete)
+    internal void SetupDualWheels(DualWheelsFeature feature)
     {
-        StartCoroutine(USpinBonusSequence(resultData, onComplete));
+        if (feature == null) return;
+
+        var red = GetRedWheelController();
+        if (red != null && feature.redWheelValues != null && feature.redWheelValues.Count > 0)
+        {
+            red.SetupWheelWithValues(feature.redWheelValues, 8);
+        }
+
+        var green = GetGreenWheelController();
+        if (green != null && feature.greenWheelValues != null && feature.greenWheelValues.Count > 0)
+        {
+            green.SetupWheelWithValues(feature.greenWheelValues, 12);
+        }
     }
+
+    private WheelSpinController GetRedWheelController()
+    {
+        if (redWheel != null) return redWheel;
+        if (gameManager != null && gameManager.redWheel != null) return gameManager.redWheel;
+        return null;
+    }
+
+    private WheelSpinController GetGreenWheelController()
+    {
+        if (greenWheel != null) return greenWheel;
+        if (gameManager != null && gameManager.greenWheel != null) return gameManager.greenWheel;
+        return null;
+    }
+
+
 
     internal void TriggerDualWheelsBonus(DualWheelsBonusData bonusData, System.Action onComplete)
     {
@@ -1355,16 +1379,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        USpinResultData wheelData = new USpinResultData
-        {
-            triggered = bonusData.isTriggered,
-            winInCash = bonusData.totalWinAmount,
-            multiplierAwarded = bonusData.greenWheelValue > 0 ? bonusData.greenWheelValue : bonusData.redWheelValue,
-            type = "MULTIPLIER",
-            sliceIndex = 0
-        };
-
-        StartCoroutine(USpinBonusSequence(wheelData, onComplete));
+        StartCoroutine(DualWheelsBonusSequence(bonusData, onComplete));
     }
 
     private bool wheelSpinTriggered = false;
@@ -1374,11 +1389,11 @@ public class UIManager : MonoBehaviour
         if (wheelSpinTriggered) return;
         wheelSpinTriggered = true;
         SetButtonInteractable(wheelSpinButton, wheelSpinButtonPortrait, false);
-        SetButtonInteractable(wheelSpinButton2, wheelSpinButtonPortrait2, false);
-        SetButtonActive(wheelSpinButton2, wheelSpinButtonPortrait2, false);
     }
 
-    private IEnumerator USpinBonusSequence(USpinResultData resultData, System.Action onComplete)
+
+
+    private IEnumerator DualWheelsBonusSequence(DualWheelsBonusData bonusData, System.Action onComplete)
     {
         // 1. Fade in back film
         if (transitionBackFilm != null)
@@ -1394,14 +1409,12 @@ public class UIManager : MonoBehaviour
         if (wheelScreen) wheelScreen.SetActive(true);
         StartWheelBonusEffects();
         
-        // Hide normal spin/stop buttons, show wheel spin button
         SetSpinStopButtonStates(isSpinningState: false, isInteractable: false);
         SetButtonActive(spinButton, spinButtonPortrait, false);
         SetButtonActive(autoSpinStopButton, autoSpinStopButtonPortrait, false);
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, true);
         SetButtonInteractable(wheelSpinButton, wheelSpinButtonPortrait, true);
         UpdateNewWheelSpinButtonsVisibility();
-        SetButtonInteractable(wheelSpinButton2, wheelSpinButtonPortrait2, true);
 
         // 3. Fade out back film
         if (transitionBackFilm != null)
@@ -1413,35 +1426,78 @@ public class UIManager : MonoBehaviour
         // 4. Wait for user to click wheel spin
         yield return new WaitUntil(() => wheelSpinTriggered);
 
-        // 5. Spin Wheel
-        int mainTargetIndex = resultData.sliceIndex;
-        bool mainSpinDone = false;
-        if (mainWheel != null)
+        // 5. Determine wheel spin order (Red, Green, or Both sequentially starting with Red)
+        string wType = (bonusData.wheelType ?? "").ToLower().Trim();
+        bool isRedTriggered = wType.Contains("red");
+        bool isGreenTriggered = wType.Contains("green");
+        bool isBothTriggered = wType.Contains("both") || wType.Contains("double") || (isRedTriggered && isGreenTriggered);
+
+        var redCtrl = GetRedWheelController();
+        var greenCtrl = GetGreenWheelController();
+
+        int redTargetIndex = bonusData.redWheelStopIndex >= 0 ? bonusData.redWheelStopIndex : FindSegmentIndexForValue(redCtrl, bonusData.redWheelValue);
+        int greenTargetIndex = bonusData.greenWheelStopIndex >= 0 ? bonusData.greenWheelStopIndex : FindSegmentIndexForValue(greenCtrl, bonusData.greenWheelValue);
+
+        Debug.Log($"[DualWheels] wType: '{bonusData.wheelType}', isRed: {isRedTriggered}, isGreen: {isGreenTriggered}, isBoth: {isBothTriggered}, redIndex: {redTargetIndex}, greenIndex: {greenTargetIndex}");
+
+        if (isBothTriggered)
         {
-            mainWheel.SpinToIndex(mainTargetIndex, () => mainSpinDone = true);
+            // Sequential spin: Red wheel first, then Green wheel
+            if (redCtrl != null)
+            {
+                bool redDone = false;
+                redCtrl.SpinToIndex(redTargetIndex, () => redDone = true);
+                yield return new WaitUntil(() => redDone);
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            if (greenCtrl != null)
+            {
+                bool greenDone = false;
+                greenCtrl.SpinToIndex(greenTargetIndex, () => greenDone = true);
+                yield return new WaitUntil(() => greenDone);
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+        else if (isRedTriggered)
+        {
+            if (redCtrl != null)
+            {
+                bool redDone = false;
+                redCtrl.SpinToIndex(redTargetIndex, () => redDone = true);
+                yield return new WaitUntil(() => redDone);
+                yield return new WaitForSeconds(0.5f);
+            }
         }
         else
         {
-            mainSpinDone = true;
+            if (greenCtrl != null)
+            {
+                bool greenDone = false;
+                greenCtrl.SpinToIndex(greenTargetIndex, () => greenDone = true);
+                yield return new WaitUntil(() => greenDone);
+                yield return new WaitForSeconds(0.5f);
+            }
         }
-        yield return new WaitUntil(() => mainSpinDone);
-        yield return new WaitForSeconds(0.5f);
 
-        // 6. Handle result (Multiplier / Cash Win)
+        // 6. Handle result popup & balance update
         {
             bool takePressed = false;
-            ShowUniversalWinPopup(WinPopupType.RegularWin, resultData.winInCash, 0, () =>
+            ShowUniversalWinPopup(WinPopupType.RegularWin, bonusData.totalWinAmount, 0, () =>
             {
                 takePressed = true;
             });
             yield return new WaitUntil(() => takePressed);
 
-            if (gameManager != null && gameManager.lastResult != null)
+            if (gameManager != null && gameManager.playerData != null)
             {
                 double prevBalance = gameManager.playerData.balance;
-                gameManager.playerData.balance += resultData.winInCash;
+                gameManager.playerData.balance += bonusData.totalWinAmount;
 
-                double targetWin = gameManager.lastResult.grandTotalWin > 0 ? gameManager.lastResult.grandTotalWin : (gameManager.lastResult.winAmount + resultData.winInCash);
+                double targetWin = (gameManager.lastResult != null && gameManager.lastResult.grandTotalWin > 0)
+                    ? gameManager.lastResult.grandTotalWin
+                    : ((gameManager.lastResult != null ? gameManager.lastResult.winAmount : 0) + bonusData.totalWinAmount);
+
                 AnimateWinUpdate(targetWin);
                 AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
             }
@@ -1465,7 +1521,6 @@ public class UIManager : MonoBehaviour
         }
 
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
-        SetButtonActive(wheelSpinButton2, wheelSpinButtonPortrait2, false);
         if (gameManager != null && gameManager.isAutoPlaying)
         {
             OnAutoPlayStarted();
@@ -1473,12 +1528,25 @@ public class UIManager : MonoBehaviour
         else
         {
             SetSpinStopButtonStates(isSpinningState: false, isInteractable: true);
+            SetButtonActive(spinButton, spinButtonPortrait, true);
         }
 
         onComplete?.Invoke();
     }
 
+    private int FindSegmentIndexForValue(WheelSpinController wheel, double targetValue)
+    {
+        if (wheel == null || wheel.SegmentDataList == null || wheel.SegmentDataList.Count == 0) return 0;
 
+        for (int i = 0; i < wheel.SegmentDataList.Count; i++)
+        {
+            if (System.Math.Abs(wheel.SegmentDataList[i].assignedValue - targetValue) < 0.01)
+            {
+                return i;
+            }
+        }
+        return 0;
+    }
 
     #endregion
 

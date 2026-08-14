@@ -56,7 +56,6 @@ public class ServerFeatures
     public AnyPayoutsData anyPayouts;
 
     // Backward compatibility fields
-    public USpinFeature uSpin;
     public MoneyBagFeature moneyBag;
     public FreeGamesFeature freeGames;
     public int betMultiplier;
@@ -82,24 +81,6 @@ public class AnyPayoutsData
     public double anyRed3X;
     public double anyWilds;
     public double anyBlue2X;
-}
-
-[Serializable]
-public class USpinFeature
-{
-    public bool enabled;
-    public int minTrigger;
-    public int symbolId;
-    public List<USpinSegment> segments;
-}
-
-[Serializable]
-public class USpinSegment
-{
-    public int sliceIndex;
-    public string type;
-    public double multiplier;
-    public int freeGames;
 }
 
 [Serializable]
@@ -195,7 +176,6 @@ public class ServerPayload
     public double totalRoundWin;
     public double netReturnRatio;
     public List<ServerWaysWin> waysWins;
-    public ServerUSpinResult uSpin;
     public ServerMoneyBagResult moneyBag;
     public ServerFreeGamesResult freeGames;
 }
@@ -219,10 +199,20 @@ public class ServerWinLine
 public class ServerDualWheelsBonus
 {
     public bool isTriggered;
+    public string type;
+    public string wheelType;
     public double totalWinAmount;
     public double greenWheelValue;
     public double redWheelValue;
-    public string wheelType;
+    public int greenWheelStopIndex = -1;
+    public int redWheelStopIndex = -1;
+
+    public string GetEffectiveWheelType()
+    {
+        if (!string.IsNullOrEmpty(type)) return type;
+        if (!string.IsNullOrEmpty(wheelType)) return wheelType;
+        return "";
+    }
 }
 
 [Serializable]
@@ -246,22 +236,7 @@ public class ServerPosition
     public int col;
 }
 
-[Serializable]
-public class ServerUSpinResult
-{
-    public bool triggered;
-    public ServerUSpinResultDetail result;
-}
 
-[Serializable]
-public class ServerUSpinResultDetail
-{
-    public int sliceIndex;
-    public string type;
-    public double multiplierAwarded;
-    public int freeGamesAwarded;
-    public double winInCash;
-}
 
 [Serializable]
 public class ServerMoneyBagResult
@@ -338,7 +313,6 @@ public class GameConfig
     // Features
     public DualWheelsFeature dualWheels;
     public AnyPayoutsData anyPayouts;
-    public List<USpinSegment> uSpinSegments;
 }
 
 [Serializable]
@@ -387,7 +361,6 @@ public class SpinResult
     
     // Server-authoritative bonus feature data
     public DualWheelsBonusData dualWheelsBonusData;
-    public USpinResultData uSpinData;
     public MoneyBagResultData moneyBagData;
 
     public double GetDualWheelsWin()
@@ -400,14 +373,9 @@ public class SpinResult
         return 0;
     }
 
-    public double GetUSpinCashWin()
-    {
-        return (uSpinData != null && uSpinData.triggered && uSpinData.type == "MULTIPLIER") ? uSpinData.winInCash : 0;
-    }
-
     public double GetTotalFeatureDeferredWins()
     {
-        return GetDualWheelsWin() + GetUSpinCashWin();
+        return GetDualWheelsWin();
     }
 }
 
@@ -418,6 +386,8 @@ public class DualWheelsBonusData
     public double totalWinAmount;
     public double greenWheelValue;
     public double redWheelValue;
+    public int greenWheelStopIndex = -1;
+    public int redWheelStopIndex = -1;
     public string wheelType;
 }
 
@@ -456,16 +426,7 @@ public class OverlayScatterData
     public List<List<int>> positions;
 }
 
-[Serializable]
-public class USpinResultData
-{
-    public bool triggered;
-    public int sliceIndex;
-    public string type;
-    public double multiplierAwarded;
-    public int freeGamesAwarded;
-    public double winInCash;
-}
+
 
 [Serializable]
 public class MoneyBagResultData
@@ -585,10 +546,7 @@ public static class InitDataConverter
                 config.initialFreeSpins = serverData.features.freeGames.maxTotalFreeGames;
             }
 
-            if (serverData.features.uSpin != null && serverData.features.uSpin.segments != null)
-            {
-                config.uSpinSegments = serverData.features.uSpin.segments;
-            }
+
         }
 
         return config;
@@ -648,10 +606,6 @@ public static class InitDataConverter
             {
                 featureWins += serverResponse.payload.moneyBag.result.winInCash;
             }
-            if (serverResponse.payload.uSpin?.result != null)
-            {
-                featureWins += serverResponse.payload.uSpin.result.winInCash;
-            }
         }
 
         double grandTotalWinVal = (serverResponse.payload != null && serverResponse.payload.grandTotalWin > 0)
@@ -706,19 +660,9 @@ public static class InitDataConverter
                     totalWinAmount = serverResponse.payload.dualWheelsBonus.totalWinAmount,
                     greenWheelValue = serverResponse.payload.dualWheelsBonus.greenWheelValue,
                     redWheelValue = serverResponse.payload.dualWheelsBonus.redWheelValue,
-                    wheelType = serverResponse.payload.dualWheelsBonus.wheelType
-                }
-                : null,
-
-            uSpinData = (serverResponse.payload?.uSpin != null && serverResponse.payload.uSpin.triggered && serverResponse.payload.uSpin.result != null)
-                ? new USpinResultData
-                {
-                    triggered = true,
-                    sliceIndex = serverResponse.payload.uSpin.result.sliceIndex,
-                    type = serverResponse.payload.uSpin.result.type,
-                    multiplierAwarded = serverResponse.payload.uSpin.result.multiplierAwarded,
-                    freeGamesAwarded = serverResponse.payload.uSpin.result.freeGamesAwarded,
-                    winInCash = serverResponse.payload.uSpin.result.winInCash
+                    greenWheelStopIndex = serverResponse.payload.dualWheelsBonus.greenWheelStopIndex,
+                    redWheelStopIndex = serverResponse.payload.dualWheelsBonus.redWheelStopIndex,
+                    wheelType = serverResponse.payload.dualWheelsBonus.GetEffectiveWheelType()
                 }
                 : null,
                 
