@@ -5631,7 +5631,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -6708175102618497557, guid: 209e72d2987c24f709be92def748e98a, type: 3}
+  m_Sprite: {fileID: -8894378161134838276, guid: 7f73ca3f9068347eda56bc8eb24bbf48, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -25990,7 +25990,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f521a04de7f494272a617b2719edd271, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SocketIOManager
-  testToken: 6ba8a5ec688e4af8a294e9115a596cad
+  testToken: d5a5f8656e2e4a238e91898d4dc8e717
   gameManager: {fileID: 1206269883}
   uiManager: {fileID: 885496184}
   popupManager: {fileID: 1363796882}
@@ -36069,38 +36069,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b53a6ff2fd16c4f45802418c0bbc22cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MoneyBagController
-  moneyBagButtons:
-  - {fileID: 1156364431}
-  - {fileID: 1136015782}
-  - {fileID: 1775621554}
-  rewardTexts:
-  - {fileID: 1814884244}
-  - {fileID: 1905119541}
-  - {fileID: 534082950}
-  coinPiles:
-  - {fileID: 1922656530}
-  - {fileID: 1401985853}
-  - {fileID: 338666589}
-  coinFountainAnimObjects:
-  - {fileID: 64572212}
-  - {fileID: 1224277852}
-  - {fileID: 412886951}
-  titleObjects:
-  - {fileID: 1955887956}
-  - {fileID: 1050108}
-  congratulationObject: {fileID: 844076901}
-  popDuration: 0.5
-  textMoveDuration: 1
-  fountainAnimDuration: 1
-  winTextTargetPos: {x: 0, y: -200, z: 0}
-  currentResultData:
-    triggered: 0
-    pickedIndex: 0
-    revealed: 
-    creditsAwarded: 0
-    winInCash: 0
-  hasPicked: 0
-  originalTextPositions: []
 --- !u!1 &1778259296
 GameObject:
   m_ObjectHideFlags: 0
