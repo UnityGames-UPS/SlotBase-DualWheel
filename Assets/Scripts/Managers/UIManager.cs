@@ -44,19 +44,39 @@ public class UIManager : MonoBehaviour
     [SerializeField] private WheelSpinController greenWheel;
     [SerializeField] private GameObject wheelScreen;
     [SerializeField] private Button wheelSpinButton;
-    [SerializeField] private Transform wheelTitleTransform;
-    [SerializeField] private List<Transform> wheelTitleObjects = new List<Transform>();
-    [SerializeField] private CanvasGroup transitionBackFilm;
-    [SerializeField] private StarFountain wheelCoinFountain;
     [SerializeField] private Transform wheelAnticlockwiseRotatingObject;
     [SerializeField] private float wheelRotationDuration = 8f;
     private Tween wheelAnticlockwiseRotationTween;
-    private List<Tween> wheelTitleTweens = new List<Tween>();
-    private Dictionary<Transform, Vector3> wheelTitleInitialScales = new Dictionary<Transform, Vector3>();
     [Header("Bonus Wheel - Portrait")]
     [SerializeField] private Button wheelSpinButtonPortrait;
-    [SerializeField] private Transform wheelTitleTransformPortrait;
-    
+
+
+    [Header("Top Bar Settings")]
+    [SerializeField] private GameObject landscapeTopBarObject;
+    [SerializeField] private GameObject portraitTopBarObject;
+
+    [Header("Bonus Wheel Transition Settings")]
+    [SerializeField] private Transform slotObject;
+
+    [SerializeField] private Transform wheelParent;
+    [SerializeField] private Transform redWheelTransform;
+    [SerializeField] private Transform greenWheelTransform;
+    [SerializeField] private Button redCenterSpinButton;
+    [SerializeField] private Button greenCenterSpinButton;
+    [SerializeField] private GameObject redWheelTitleObject;
+    [SerializeField] private GameObject greenWheelTitleObject;
+    [SerializeField] private GameObject dualWheelTitleObject;
+    [SerializeField] private float slotBgMoveDuration = 0.5f;
+    [SerializeField] private float slotBgTargetY = -1000f;
+    [SerializeField] private float wheelMoveDuration = 0.6f;
+    [SerializeField] private float phase2MoveDuration = 0.6f;
+    [SerializeField] private float redWheelTargetX = -175f;
+    [SerializeField] private float greenWheelTargetX = 175f;
+    [SerializeField] private Vector3 redWheelFinalPos = new Vector3(-140f, 25f, 0f);
+    [SerializeField] private Vector3 greenWheelFinalPos = new Vector3(140f, 65f, 0f);
+    [SerializeField] private Vector3 wheelTargetScale = new Vector3(1.23f, 1.23f, 1.23f);
+    [SerializeField] private Vector3 wheelPopScale = new Vector3(1.3f, 1.3f, 1.3f);
+
 
 
     [Header("Universal Win Popup")]
@@ -313,9 +333,17 @@ public class UIManager : MonoBehaviour
 
         if (freeSpinCountContainer) freeSpinCountContainer.SetActive(false);
         StopWheelBonusEffects();
+        var redInit = GetRedWheelController();
+        if (redInit != null) redInit.ResetWheelEffects();
+        var greenInit = GetGreenWheelController();
+        if (greenInit != null) greenInit.ResetWheelEffects();
+        if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
+        if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
+        if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
+        SetAllWheelSpinButtonsInteractable(false);
+        UpdateTopBarVisibility(true);
         if (wheelScreen) wheelScreen.SetActive(false);
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
-        if (transitionBackFilm) transitionBackFilm.gameObject.SetActive(false);
         UpdatePingDisplay("-- ms");
     }
 
@@ -453,6 +481,19 @@ public class UIManager : MonoBehaviour
 
         if (wheelSpinButton) wheelSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
         if (wheelSpinButtonPortrait) wheelSpinButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
+        if (redCenterSpinButton) redCenterSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
+        if (greenCenterSpinButton) greenCenterSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
+
+        var redSetup = GetRedWheelController();
+        if (redSetup != null && redSetup.CenterSpinButton != null)
+        {
+            redSetup.CenterSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
+        }
+        var greenSetup = GetGreenWheelController();
+        if (greenSetup != null && greenSetup.CenterSpinButton != null)
+        {
+            greenSetup.CenterSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
+        }
 
         // Take button for universal win popup
         if (uwpTakeButton) uwpTakeButton.onClick.AddListener(OnUniversalWinTakeButtonClicked);
@@ -1369,6 +1410,139 @@ public class UIManager : MonoBehaviour
         return null;
     }
 
+    private Transform GetRedWheelTransform()
+    {
+        if (redWheelTransform != null) return redWheelTransform;
+        var red = GetRedWheelController();
+        return red != null ? red.transform : null;
+    }
+
+    private Transform GetGreenWheelTransform()
+    {
+        if (greenWheelTransform != null) return greenWheelTransform;
+        var green = GetGreenWheelController();
+        return green != null ? green.transform : null;
+    }
+
+    private Transform GetSlotObjectTransform()
+    {
+        if (slotObject != null) return slotObject;
+        var oc = Object.FindFirstObjectByType<OCController>();
+        if (oc != null && oc.SlotObject != null) return oc.SlotObject;
+        var slotView = Object.FindFirstObjectByType<SlotView>();
+        return slotView != null ? slotView.transform : null;
+    }
+
+    private Transform GetWheelParentTransform()
+    {
+        if (wheelParent != null) return wheelParent;
+        var redTr = GetRedWheelTransform();
+        return redTr != null ? redTr.parent : null;
+    }
+
+    private IEnumerator PlayTitleImageAnimationLoop(GameObject titleObj)
+    {
+        if (titleObj == null) yield break;
+
+        titleObj.SetActive(true);
+
+        ImageAnimation imgAnim = titleObj.GetComponent<ImageAnimation>();
+        if (imgAnim != null)
+        {
+            bool loopFinished = false;
+            System.Action<int> loopCallback = (loopCount) =>
+            {
+                if (loopCount >= 1) loopFinished = true;
+            };
+
+            imgAnim.onLoopComplete += loopCallback;
+            imgAnim.StartAnimation();
+
+            float duration = 1.5f;
+            if (imgAnim.textureArray != null && imgAnim.textureArray.Count > 0)
+            {
+                if (imgAnim.useDynamicFramerate)
+                {
+                    duration = imgAnim.dynamicLoopDuration;
+                }
+                else
+                {
+                    float speed = imgAnim.AnimationSpeed > 0 ? imgAnim.AnimationSpeed : 1f;
+                    duration = (0.0416666679f * imgAnim.textureArray.Count / speed) + imgAnim.delayBetweenLoop;
+                }
+            }
+            if (duration < 0.2f) duration = 1.5f;
+
+            float timer = 0f;
+            while (!loopFinished && timer < (duration + 0.5f))
+            {
+                timer += Time.deltaTime;
+                yield return null;
+            }
+
+            imgAnim.onLoopComplete -= loopCallback;
+        }
+        else
+        {
+            yield return new WaitForSeconds(1.5f);
+        }
+
+        titleObj.SetActive(false);
+    }
+
+    private Tween AnimateWheelPopScale(Transform tr, Vector3 targetScale, Vector3 popScale, float duration)
+    {
+        if (tr == null) return null;
+        Sequence seq = DOTween.Sequence();
+        seq.Append(tr.DOScale(popScale, duration * 0.5f).SetEase(Ease.OutCubic));
+        seq.Append(tr.DOScale(targetScale, duration * 0.5f).SetEase(Ease.InOutCubic));
+        return seq;
+    }
+
+    private void SetWheelSiblingOrder(bool redOnTop)
+    {
+        Transform redTr = GetRedWheelTransform();
+        Transform greenTr = GetGreenWheelTransform();
+
+        if (redTr != null && greenTr != null)
+        {
+            if (redOnTop)
+            {
+                greenTr.SetSiblingIndex(0);
+                redTr.SetSiblingIndex(1);
+            }
+            else
+            {
+                redTr.SetSiblingIndex(0);
+                greenTr.SetSiblingIndex(1);
+            }
+        }
+
+        if (redWheelTitleObject != null) redWheelTitleObject.transform.SetAsLastSibling();
+        if (greenWheelTitleObject != null) greenWheelTitleObject.transform.SetAsLastSibling();
+        if (dualWheelTitleObject != null) dualWheelTitleObject.transform.SetAsLastSibling();
+    }
+
+    private void UpdateTopBarVisibility(bool visible = true)
+    {
+        if (!visible)
+        {
+            if (landscapeTopBarObject != null) landscapeTopBarObject.SetActive(false);
+            if (portraitTopBarObject != null) portraitTopBarObject.SetActive(false);
+            return;
+        }
+
+        var oc = Object.FindFirstObjectByType<OrientationChange>();
+        bool isPortrait = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
+
+        if (landscapeTopBarObject != null) landscapeTopBarObject.SetActive(!isPortrait);
+        if (portraitTopBarObject != null) portraitTopBarObject.SetActive(isPortrait);
+    }
+
+
+
+
+
 
 
     internal void TriggerDualWheelsBonus(DualWheelsBonusData bonusData, System.Action onComplete)
@@ -1384,57 +1558,189 @@ public class UIManager : MonoBehaviour
 
     private bool wheelSpinTriggered = false;
 
+    private void SetAllWheelSpinButtonsInteractable(bool interactable)
+    {
+        SetButtonInteractable(wheelSpinButton, wheelSpinButtonPortrait, interactable);
+        if (redCenterSpinButton) redCenterSpinButton.interactable = interactable;
+        if (greenCenterSpinButton) greenCenterSpinButton.interactable = interactable;
+
+        var red = GetRedWheelController();
+        if (red != null) red.SetCenterSpinButtonInteractable(interactable);
+
+        var green = GetGreenWheelController();
+        if (green != null) green.SetCenterSpinButtonInteractable(interactable);
+    }
+
     private void OnWheelSpinClicked()
     {
         if (wheelSpinTriggered) return;
         wheelSpinTriggered = true;
-        SetButtonInteractable(wheelSpinButton, wheelSpinButtonPortrait, false);
+        SetAllWheelSpinButtonsInteractable(false);
     }
 
 
 
     private IEnumerator DualWheelsBonusSequence(DualWheelsBonusData bonusData, System.Action onComplete)
     {
-        // 1. Fade in back film
-        if (transitionBackFilm != null)
-        {
-            transitionBackFilm.gameObject.SetActive(true);
-            transitionBackFilm.alpha = 0f;
-            yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-            yield return new WaitForSeconds(0.5f);
-        }
-        
-        // 2. Open spin wheel screen
-        wheelSpinTriggered = false;
-        if (wheelScreen) wheelScreen.SetActive(true);
-        StartWheelBonusEffects();
-        
-        SetSpinStopButtonStates(isSpinningState: false, isInteractable: false);
-        SetButtonActive(spinButton, spinButtonPortrait, false);
-        SetButtonActive(autoSpinStopButton, autoSpinStopButtonPortrait, false);
-        SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, true);
-        SetButtonInteractable(wheelSpinButton, wheelSpinButtonPortrait, true);
-        UpdateNewWheelSpinButtonsVisibility();
+        // Determine controllers & wheel trigger types first
+        var redCtrl = GetRedWheelController();
+        var greenCtrl = GetGreenWheelController();
+        Transform redTr = GetRedWheelTransform();
+        Transform greenTr = GetGreenWheelTransform();
+        Transform targetSlotBG = GetSlotObjectTransform();
 
-        // 3. Fade out back film
-        if (transitionBackFilm != null)
-        {
-            yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-            transitionBackFilm.gameObject.SetActive(false);
-        }
-
-        // 4. Wait for user to click wheel spin
-        yield return new WaitUntil(() => wheelSpinTriggered);
-
-        // 5. Determine wheel spin order (Red, Green, or Both sequentially starting with Red)
         string wType = (bonusData.wheelType ?? "").ToLower().Trim();
         bool isRedTriggered = wType.Contains("red");
         bool isGreenTriggered = wType.Contains("green");
         bool isBothTriggered = wType.Contains("both") || wType.Contains("double") || (isRedTriggered && isGreenTriggered);
 
-        var redCtrl = GetRedWheelController();
-        var greenCtrl = GetGreenWheelController();
+        // Ensure title objects are inactive initially
+        if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
+        if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
+        if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
 
+        // Reset wheel effects initially (normal UI, no disable screen anything)
+        if (redCtrl != null) redCtrl.ResetWheelEffects();
+        if (greenCtrl != null) greenCtrl.ResetWheelEffects();
+
+        // Record initial positions & scales
+        Vector3 initialSlotPos = targetSlotBG != null ? targetSlotBG.localPosition : Vector3.zero;
+        Vector3 initialRedPos = redTr != null ? redTr.localPosition : Vector3.zero;
+        Vector3 initialGreenPos = greenTr != null ? greenTr.localPosition : Vector3.zero;
+        Vector3 initialRedScale = redTr != null ? redTr.localScale : Vector3.one;
+        Vector3 initialGreenScale = greenTr != null ? greenTr.localScale : Vector3.one;
+
+        // Open spin wheel screen and turn spin buttons active, but NOT interactable yet
+        wheelSpinTriggered = false;
+        if (wheelScreen) wheelScreen.SetActive(true);
+        StartWheelBonusEffects();
+
+        SetSpinStopButtonStates(isSpinningState: false, isInteractable: false);
+        SetButtonActive(spinButton, spinButtonPortrait, false);
+        SetButtonActive(autoSpinStopButton, autoSpinStopButtonPortrait, false);
+        SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, true);
+        SetAllWheelSpinButtonsInteractable(false); // Stay interactable off initially
+        UpdateNewWheelSpinButtonsVisibility();
+
+        // 1. Slot BG moves down from current Y to -1000 and top bar is disabled
+        UpdateTopBarVisibility(false);
+        if (targetSlotBG != null)
+        {
+            yield return targetSlotBG.DOLocalMoveY(slotBgTargetY, slotBgMoveDuration).SetEase(Ease.InOutCubic).WaitForCompletion();
+        }
+
+        // 2. Both wheels come to mid target position (-175 and 175) with normal UI (no disable screen anything)
+        List<Tween> midMoveTweens = new List<Tween>();
+        if (redTr != null)
+        {
+            Vector3 midRedPos = new Vector3(redWheelTargetX, initialRedPos.y, initialRedPos.z);
+            midMoveTweens.Add(redTr.DOLocalMove(midRedPos, wheelMoveDuration).SetEase(Ease.OutCubic));
+            midMoveTweens.Add(redTr.DOScale(Vector3.one, wheelMoveDuration).SetEase(Ease.OutCubic));
+        }
+
+        if (greenTr != null)
+        {
+            Vector3 midGreenPos = new Vector3(greenWheelTargetX, initialGreenPos.y, initialGreenPos.z);
+            midMoveTweens.Add(greenTr.DOLocalMove(midGreenPos, wheelMoveDuration).SetEase(Ease.OutCubic));
+            midMoveTweens.Add(greenTr.DOScale(Vector3.one, wheelMoveDuration).SetEase(Ease.OutCubic));
+        }
+
+        if (midMoveTweens.Count > 0)
+        {
+            yield return midMoveTweens[0].WaitForCompletion();
+        }
+
+        // 3. When it reaches mid target position (175 and -175), title object gets enabled, plays 1 loop animation, then disables
+        GameObject targetTitleObj = null;
+        if (isBothTriggered)
+        {
+            targetTitleObj = dualWheelTitleObject;
+        }
+        else if (isRedTriggered)
+        {
+            targetTitleObj = redWheelTitleObject;
+        }
+        else
+        {
+            targetTitleObj = greenWheelTitleObject;
+        }
+
+        if (targetTitleObj != null)
+        {
+            yield return StartCoroutine(PlayTitleImageAnimationLoop(targetTitleObj));
+        }
+
+        // 4. After title animation finishes (Phase 2):
+        // Update child index / sorting, full disable overlays, final positions (-140, 25, 0 for Red & 140, 65, 0 for Green), and pop scales (1 -> 1.3 -> 1.23)
+        List<Tween> finalMoveTweens = new List<Tween>();
+
+        if (isBothTriggered)
+        {
+            // Dual Wheel: no wheel gets full disable, Red wheel is on top. Both get pop scale 1 -> 1.3 -> 1.23
+            SetWheelSiblingOrder(true);
+            if (redCtrl != null) redCtrl.SetFullDisable(false);
+            if (greenCtrl != null) greenCtrl.SetFullDisable(false);
+
+            if (redTr != null)
+            {
+                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(AnimateWheelPopScale(redTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
+            }
+            if (greenTr != null)
+            {
+                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(AnimateWheelPopScale(greenTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
+            }
+        }
+        else if (isRedTriggered)
+        {
+            // Red Wheel only: Red on top with pop scale 1 -> 1.3 -> 1.23. Green gets full disable ON with normal scale 1 -> 1.23
+            SetWheelSiblingOrder(true);
+            if (redCtrl != null) redCtrl.SetFullDisable(false);
+            if (greenCtrl != null) greenCtrl.SetFullDisable(true);
+
+            if (redTr != null)
+            {
+                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(AnimateWheelPopScale(redTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
+            }
+            if (greenTr != null)
+            {
+                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(greenTr.DOScale(wheelTargetScale, phase2MoveDuration).SetEase(Ease.OutCubic));
+            }
+        }
+        else
+        {
+            // Green Wheel only: Green on top with pop scale 1 -> 1.3 -> 1.23. Red gets full disable ON with normal scale 1 -> 1.23
+            SetWheelSiblingOrder(false);
+            if (redCtrl != null) redCtrl.SetFullDisable(true);
+            if (greenCtrl != null) greenCtrl.SetFullDisable(false);
+
+            if (redTr != null)
+            {
+                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(redTr.DOScale(wheelTargetScale, phase2MoveDuration).SetEase(Ease.OutCubic));
+            }
+            if (greenTr != null)
+            {
+                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(AnimateWheelPopScale(greenTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
+            }
+        }
+
+        if (finalMoveTweens.Count > 0)
+        {
+            yield return finalMoveTweens[0].WaitForCompletion();
+        }
+
+        // 5. Spin start button gets enabled after final positions are reached
+        SetAllWheelSpinButtonsInteractable(true);
+
+        // 6. Wait for user to click wheel spin
+        yield return new WaitUntil(() => wheelSpinTriggered);
+
+        // 7. Execute wheel spin(s)
         int redTargetIndex = bonusData.redWheelStopIndex >= 0 ? bonusData.redWheelStopIndex : FindSegmentIndexForValue(redCtrl, bonusData.redWheelValue);
         int greenTargetIndex = bonusData.greenWheelStopIndex >= 0 ? bonusData.greenWheelStopIndex : FindSegmentIndexForValue(greenCtrl, bonusData.greenWheelValue);
 
@@ -1442,12 +1748,14 @@ public class UIManager : MonoBehaviour
 
         if (isBothTriggered)
         {
-            // Sequential spin: Red wheel first, then Green wheel
+            // Sequential spin: 1st Red wheel spins -> stops at result -> enables half disable and result shine -> 2nd Green wheel spins
             if (redCtrl != null)
             {
                 bool redDone = false;
                 redCtrl.SpinToIndex(redTargetIndex, () => redDone = true);
                 yield return new WaitUntil(() => redDone);
+                redCtrl.SetResultShine(true);
+                redCtrl.SetHalfDisable(true);
                 yield return new WaitForSeconds(0.5f);
             }
 
@@ -1456,6 +1764,8 @@ public class UIManager : MonoBehaviour
                 bool greenDone = false;
                 greenCtrl.SpinToIndex(greenTargetIndex, () => greenDone = true);
                 yield return new WaitUntil(() => greenDone);
+                greenCtrl.SetResultShine(true);
+                greenCtrl.SetHalfDisable(true);
                 yield return new WaitForSeconds(0.5f);
             }
         }
@@ -1466,6 +1776,8 @@ public class UIManager : MonoBehaviour
                 bool redDone = false;
                 redCtrl.SpinToIndex(redTargetIndex, () => redDone = true);
                 yield return new WaitUntil(() => redDone);
+                redCtrl.SetResultShine(true);
+                redCtrl.SetHalfDisable(true);
                 yield return new WaitForSeconds(0.5f);
             }
         }
@@ -1476,11 +1788,13 @@ public class UIManager : MonoBehaviour
                 bool greenDone = false;
                 greenCtrl.SpinToIndex(greenTargetIndex, () => greenDone = true);
                 yield return new WaitUntil(() => greenDone);
+                greenCtrl.SetResultShine(true);
+                greenCtrl.SetHalfDisable(true);
                 yield return new WaitForSeconds(0.5f);
             }
         }
 
-        // 6. Handle result popup & balance update
+        // 8. Handle result popup & balance update
         {
             bool takePressed = false;
             ShowUniversalWinPopup(WinPopupType.RegularWin, bonusData.totalWinAmount, 0, () =>
@@ -1501,23 +1815,36 @@ public class UIManager : MonoBehaviour
                 AnimateWinUpdate(targetWin);
                 AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
             }
-            
-            if (transitionBackFilm != null)
-            {
-                transitionBackFilm.gameObject.SetActive(true);
-                transitionBackFilm.alpha = 0f;
-                yield return transitionBackFilm.DOFade(1f, 0.5f).WaitForCompletion();
-                yield return new WaitForSeconds(0.5f);
-            }
-            
+
             StopWheelBonusEffects();
+            if (redCtrl != null) redCtrl.ResetWheelEffects();
+            if (greenCtrl != null) greenCtrl.ResetWheelEffects();
+            if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
+            if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
+            if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
+            UpdateTopBarVisibility(true);
             if (wheelScreen) wheelScreen.SetActive(false);
-            
-            if (transitionBackFilm != null)
-            {
-                yield return transitionBackFilm.DOFade(0f, 0.5f).WaitForCompletion();
-                transitionBackFilm.gameObject.SetActive(false);
-            }
+        }
+
+        // 9. Restore Slot BG position & Wheel positions/scales
+        if (targetSlotBG != null)
+        {
+            targetSlotBG.DOKill();
+            targetSlotBG.localPosition = initialSlotPos;
+        }
+
+        if (redTr != null)
+        {
+            redTr.DOKill();
+            redTr.localPosition = initialRedPos;
+            redTr.localScale = initialRedScale;
+        }
+
+        if (greenTr != null)
+        {
+            greenTr.DOKill();
+            greenTr.localPosition = initialGreenPos;
+            greenTr.localScale = initialGreenScale;
         }
 
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
@@ -1764,13 +2091,6 @@ public class UIManager : MonoBehaviour
 
     internal void StartWheelBonusEffects()
     {
-        var oc = Object.FindFirstObjectByType<OrientationChange>();
-        
-        if (wheelCoinFountain != null)
-        {
-            wheelCoinFountain.PlayStarBurst();
-        }
-
         if (wheelAnticlockwiseRotatingObject != null)
         {
             if (wheelAnticlockwiseRotationTween != null)
@@ -1785,78 +2105,14 @@ public class UIManager : MonoBehaviour
                 .SetEase(Ease.Linear)
                 .SetLoops(-1, LoopType.Incremental);
         }
-
-        // Title object popping loop animation (1 -> 1.2 -> 1 scale in loop)
-        List<Transform> titlesToAnimate = new List<Transform>();
-        if (wheelTitleTransform != null) titlesToAnimate.Add(wheelTitleTransform);
-        if (wheelTitleTransformPortrait != null) titlesToAnimate.Add(wheelTitleTransformPortrait);
-        if (wheelTitleObjects != null)
-        {
-            foreach (var t in wheelTitleObjects)
-            {
-                if (t != null && !titlesToAnimate.Contains(t)) titlesToAnimate.Add(t);
-            }
-        }
-
-        if (wheelTitleTweens == null) wheelTitleTweens = new List<Tween>();
-        else wheelTitleTweens.Clear();
-
-        if (wheelTitleInitialScales == null) wheelTitleInitialScales = new Dictionary<Transform, Vector3>();
-
-        foreach (var t in titlesToAnimate)
-        {
-            if (t == null) continue;
-            t.DOKill();
-            if (!wheelTitleInitialScales.ContainsKey(t))
-            {
-                wheelTitleInitialScales[t] = t.localScale;
-            }
-            Vector3 initScale = wheelTitleInitialScales[t];
-            t.localScale = initScale;
-
-            Tween titleTween = t.DOScale(initScale * 1.2f, 0.6f)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo);
-
-            wheelTitleTweens.Add(titleTween);
-        }
     }
 
     internal void StopWheelBonusEffects()
     {
-        if (wheelCoinFountain != null)
-        {
-            wheelCoinFountain.StopStarBurst();
-        }
-
         if (wheelAnticlockwiseRotationTween != null)
         {
             wheelAnticlockwiseRotationTween.Kill();
             wheelAnticlockwiseRotationTween = null;
-        }
-
-        if (wheelTitleTweens != null)
-        {
-            foreach (var tween in wheelTitleTweens)
-            {
-                if (tween != null && tween.IsActive())
-                {
-                    tween.Kill();
-                }
-            }
-            wheelTitleTweens.Clear();
-        }
-
-        if (wheelTitleInitialScales != null)
-        {
-            foreach (var kvp in wheelTitleInitialScales)
-            {
-                if (kvp.Key != null)
-                {
-                    kvp.Key.DOKill();
-                    kvp.Key.localScale = kvp.Value;
-                }
-            }
         }
     }
 

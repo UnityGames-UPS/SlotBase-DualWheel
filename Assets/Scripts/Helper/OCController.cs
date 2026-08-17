@@ -9,6 +9,7 @@ public class OCController : MonoBehaviour
     [SerializeField] private OrientationChange orientationChange;
     [SerializeField] private CanvasScaler canvasScaler;
     [SerializeField] private Transform slotObject;
+    internal Transform SlotObject => slotObject;
     [SerializeField] private List<RectTransform> resizedObjects = new List<RectTransform>();
     [SerializeField] private List<RectTransform> squareResizedObjects = new List<RectTransform>();
 

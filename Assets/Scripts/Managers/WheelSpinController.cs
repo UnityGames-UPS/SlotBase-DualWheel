@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
 using System;
 using TMPro;
@@ -37,16 +38,108 @@ public class WheelSpinController : MonoBehaviour
     [Tooltip("Fine-tune the landing position. Positive shifts clockwise.")]
     [SerializeField] private float alignmentOffset = 0f;
 
+    [Header("Visual Effects & Overlays")]
+    [SerializeField] private GameObject fullDisableObject;
+    [SerializeField] private GameObject halfDisableObject;
+    [SerializeField] private GameObject resultShineObject;
+    [SerializeField] private Button centerSpinButton;
+
+    [Header("Wheel Border Animation")]
+    [SerializeField] private Image borderImage;
+    [SerializeField] private Sprite normalBorderSprite;
+    [SerializeField] private Sprite spinBorderSprite1;
+    [SerializeField] private Sprite spinBorderSprite2;
+    [SerializeField] private float borderSpriteToggleInterval = 0.12f;
+
+    private Coroutine borderAnimationCoroutine;
     private float segmentAngle;
     private bool isSpinning;
     private int currentTargetIndex = -1;
 
     internal bool IsSpinning => isSpinning;
     internal List<WheelSegmentData> SegmentDataList => segments;
+    public GameObject FullDisableObject => fullDisableObject;
+    public GameObject HalfDisableObject => halfDisableObject;
+    public GameObject ResultShineObject => resultShineObject;
+    public Button CenterSpinButton => centerSpinButton;
+
+    public void SetFullDisable(bool active)
+    {
+        if (fullDisableObject != null) fullDisableObject.SetActive(active);
+    }
+
+    public void SetHalfDisable(bool active)
+    {
+        if (halfDisableObject != null) halfDisableObject.SetActive(active);
+        if (active)
+        {
+            StopBorderAnimation();
+        }
+    }
+
+    public void SetResultShine(bool active)
+    {
+        if (resultShineObject != null) resultShineObject.SetActive(active);
+    }
+
+    public void SetCenterSpinButtonInteractable(bool interactable)
+    {
+        if (centerSpinButton != null) centerSpinButton.interactable = interactable;
+    }
+
+    public void SetCenterSpinButtonActive(bool active)
+    {
+        if (centerSpinButton != null) centerSpinButton.gameObject.SetActive(active);
+    }
+
+    public void StartBorderAnimation()
+    {
+        StopBorderAnimation();
+        if (borderImage != null && spinBorderSprite1 != null && spinBorderSprite2 != null)
+        {
+            borderAnimationCoroutine = StartCoroutine(BorderSpriteLoopRoutine());
+        }
+    }
+
+    public void StopBorderAnimation()
+    {
+        if (borderAnimationCoroutine != null)
+        {
+            StopCoroutine(borderAnimationCoroutine);
+            borderAnimationCoroutine = null;
+        }
+        if (borderImage != null && normalBorderSprite != null)
+        {
+            borderImage.sprite = normalBorderSprite;
+        }
+    }
+
+    private IEnumerator BorderSpriteLoopRoutine()
+    {
+        if (borderImage == null || spinBorderSprite1 == null || spinBorderSprite2 == null) yield break;
+
+        bool useFirst = true;
+        while (true)
+        {
+            borderImage.sprite = useFirst ? spinBorderSprite1 : spinBorderSprite2;
+            useFirst = !useFirst;
+            yield return new WaitForSeconds(borderSpriteToggleInterval);
+        }
+    }
+
+    public void ResetWheelEffects()
+    {
+        if (fullDisableObject != null) fullDisableObject.SetActive(false);
+        if (halfDisableObject != null) halfDisableObject.SetActive(false);
+        if (resultShineObject != null) resultShineObject.SetActive(false);
+        SetCenterSpinButtonInteractable(false);
+        StopBorderAnimation();
+    }
 
     private void Awake()
     {
         Initialize(segments.Count);
+        ResetWheelEffects();
     }
 
     internal void Initialize(int segmentCount)
@@ -124,6 +217,7 @@ public class WheelSpinController : MonoBehaviour
         isSpinning = true;
         currentTargetIndex = targetIndex;
         AudioManager.Instance?.PlayWheelStart();
+        StartBorderAnimation();
 
         // 1. Calculate the angle for the target segment relative to the wheel's local zero
         float targetSegmentAngle = (targetIndex * segmentAngle) + alignmentOffset;
@@ -181,6 +275,7 @@ public class WheelSpinController : MonoBehaviour
         wheelRect.localRotation = Quaternion.Euler(0, 0, finalTargetLocalRotation);
 
         isSpinning = false;
+        StopBorderAnimation();
         onComplete?.Invoke();
     }
 
