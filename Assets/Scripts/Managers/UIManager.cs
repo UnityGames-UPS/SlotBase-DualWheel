@@ -77,7 +77,27 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Vector3 wheelTargetScale = new Vector3(1.23f, 1.23f, 1.23f);
     [SerializeField] private Vector3 wheelPopScale = new Vector3(1.3f, 1.3f, 1.3f);
 
-
+    [Header("Wheel Result Custom Popup")]
+    [SerializeField] private GameObject wheelResultPopup;
+    [SerializeField] private RectTransform wheelResultPopupRect;
+    [SerializeField] private GameObject wheelResultRedDummy;
+    [SerializeField] private GameObject wheelResultGreenDummy;
+    [SerializeField] private RectTransform wheelResultAreaPanel;
+    [SerializeField] private RectTransform wheelResultNumbersArea;
+    [SerializeField] private VerticalLayoutGroup wheelResultNumbersLayoutGroup;
+    [SerializeField] private TMP_Text wheelResultBetText;
+    [SerializeField] private GameObject wheelResultBetRowObject;
+    [SerializeField] private GameObject wheelResultRedRowObject;
+    [SerializeField] private GameObject wheelResultGreenRowObject;
+    [SerializeField] private TMP_Text wheelResultRedMultiplierText;
+    [SerializeField] private TMP_Text wheelResultGreenMultiplierText;
+    [SerializeField] private GameObject wheelResultFirstXObject;  // Enabled in ALL cases (single & dual)
+    [SerializeField] private GameObject wheelResultSecondXObject; // Enabled ONLY in DUAL case
+    [SerializeField] private TMP_Text wheelResultWinAmountText;
+    [SerializeField] private float wheelPopupOpenDuration = 0.4f;
+    [SerializeField] private float wheelPopupCloseDuration = 0.3f;
+    [SerializeField] private float dummyWheelStaggerDelay = 0.15f;
+    [SerializeField] private float numbersPanelStaggerDelay = 0.25f;
 
     [Header("Universal Win Popup")]
     [SerializeField] private GameObject universalWinPopup;
@@ -332,6 +352,8 @@ public class UIManager : MonoBehaviour
         if (guidePanel) guidePanel.SetActive(false);
         if (uwpWinTween != null) { uwpWinTween.Kill(); uwpWinTween = null; }
         if (starFountain != null) starFountain.StopStarBurst();
+        FindWheelResultPopupReferences();
+        if (wheelResultPopup != null) wheelResultPopup.SetActive(false);
         if (universalWinPopup) universalWinPopup.SetActive(false);
 
         StopWheelBonusEffects();
@@ -1775,14 +1797,14 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // 8. Handle result popup & balance update
+        // 8. Handle result popup & balance update after 1.0s delay
+        yield return new WaitForSeconds(1.0f);
+
+        bool takeClicked = false;
+        yield return StartCoroutine(ShowWheelResultPopupRoutine(bonusData, isRedTriggered, isGreenTriggered, isBothTriggered, () =>
         {
-            bool takePressed = false;
-            ShowUniversalWinPopup(WinPopupType.RegularWin, bonusData.totalWinAmount, 0, () =>
-            {
-                takePressed = true;
-            });
-            yield return new WaitUntil(() => takePressed);
+            takeClicked = true;
+        }));
 
             if (gameManager != null && gameManager.playerData != null)
             {
@@ -1805,7 +1827,6 @@ public class UIManager : MonoBehaviour
             if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
             UpdateTopBarVisibility(true);
             if (wheelScreen) wheelScreen.SetActive(false);
-        }
 
         // 9. Restore Slot BG position & Wheel positions/scales
         if (targetSlotBG != null)
@@ -1854,6 +1875,397 @@ public class UIManager : MonoBehaviour
             }
         }
         return 0;
+    }
+
+    private void FindWheelResultPopupReferences()
+    {
+        Transform parentTr = wheelParent != null ? wheelParent : (wheelScreen != null ? wheelScreen.transform : null);
+        if (parentTr == null) return;
+
+        if (wheelResultPopup == null)
+        {
+            Transform foundBG = parentTr.Find("ResultBG");
+            if (foundBG == null)
+            {
+                foreach (Transform child in parentTr.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "ResultBG") { foundBG = child; break; }
+                }
+            }
+            if (foundBG != null) wheelResultPopup = foundBG.gameObject;
+        }
+
+        if (wheelResultPopup != null)
+        {
+            if (wheelResultPopupRect == null) wheelResultPopupRect = wheelResultPopup.GetComponent<RectTransform>();
+
+            Transform bgTr = wheelResultPopup.transform;
+
+            if (wheelResultRedDummy == null)
+            {
+                Transform t = bgTr.Find("RedDummy");
+                if (t != null) wheelResultRedDummy = t.gameObject;
+            }
+
+            if (wheelResultGreenDummy == null)
+            {
+                Transform t = bgTr.Find("GreenDummy");
+                if (t != null) wheelResultGreenDummy = t.gameObject;
+            }
+
+            if (wheelResultAreaPanel == null)
+            {
+                Transform t = bgTr.Find("ResultArea");
+                if (t != null) wheelResultAreaPanel = t.GetComponent<RectTransform>();
+            }
+
+            if (wheelResultAreaPanel != null)
+            {
+                if (wheelResultNumbersArea == null)
+                {
+                    Transform t = wheelResultAreaPanel.Find("NumbersArea");
+                    if (t != null) wheelResultNumbersArea = t.GetComponent<RectTransform>();
+                }
+
+                if (wheelResultWinAmountText == null)
+                {
+                    Transform t = wheelResultAreaPanel.Find("FeatureWinText");
+                    if (t != null) wheelResultWinAmountText = t.GetComponent<TMP_Text>();
+                }
+            }
+
+            if (wheelResultNumbersArea != null)
+            {
+                TMP_Text[] texts = wheelResultNumbersArea.GetComponentsInChildren<TMP_Text>(true);
+                foreach (var txt in texts)
+                {
+                    string nameLower = txt.gameObject.name.ToLower();
+                    Transform parent = txt.transform.parent;
+                    string pName = parent != null ? parent.gameObject.name.ToLower() : "";
+
+                    if (nameLower.Contains("bet") || pName.Contains("bet"))
+                    {
+                        if (wheelResultBetText == null || nameLower.Contains("value")) wheelResultBetText = txt;
+                    }
+                    else if (nameLower.Contains("red") || pName.Contains("red"))
+                    {
+                        if (wheelResultRedMultiplierText == null) wheelResultRedMultiplierText = txt;
+                    }
+                    else if (nameLower.Contains("green") || pName.Contains("green"))
+                    {
+                        if (wheelResultGreenMultiplierText == null) wheelResultGreenMultiplierText = txt;
+                    }
+                }
+            }
+        }
+    }
+
+    private IEnumerator OpenWheelResultPopupRoutine(DualWheelsBonusData bonusData, bool isRed, bool isGreen, bool isBoth)
+    {
+        FindWheelResultPopupReferences();
+
+        if (wheelResultPopup == null)
+        {
+            ShowUniversalWinPopup(WinPopupType.RegularWin, bonusData.totalWinAmount, 0, null);
+            yield break;
+        }
+
+        // Setup dummy wheels position & visibility (Both dummy wheels enabled in EVERY scenario)
+        if (wheelResultRedDummy != null)
+        {
+            wheelResultRedDummy.SetActive(true);
+            RectTransform rTr = wheelResultRedDummy.GetComponent<RectTransform>();
+            if (rTr != null) rTr.anchoredPosition = new Vector2(-100f, 87f);
+        }
+
+        if (wheelResultGreenDummy != null)
+        {
+            wheelResultGreenDummy.SetActive(true);
+            RectTransform gTr = wheelResultGreenDummy.GetComponent<RectTransform>();
+            if (gTr != null) gTr.anchoredPosition = new Vector2(100f, 117f);
+        }
+
+        // 1. Enable/Disable Preset UI Row Objects & Multiplication (X) Symbols based on Feature
+        if (wheelResultBetRowObject != null) wheelResultBetRowObject.SetActive(true);
+
+        if (wheelResultRedRowObject != null) wheelResultRedRowObject.SetActive(isRed || isBoth);
+        if (wheelResultGreenRowObject != null) wheelResultGreenRowObject.SetActive(isGreen || isBoth);
+
+        // Adjust VerticalLayoutGroup spacing: 0 when both wheels active, -95 when only one wheel active
+        if (wheelResultNumbersLayoutGroup == null && wheelResultNumbersArea != null)
+        {
+            wheelResultNumbersLayoutGroup = wheelResultNumbersArea.GetComponent<VerticalLayoutGroup>();
+        }
+
+        if (wheelResultNumbersLayoutGroup != null)
+        {
+            wheelResultNumbersLayoutGroup.spacing = isBoth ? 0f : -95f;
+            if (wheelResultNumbersArea != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(wheelResultNumbersArea);
+            }
+        }
+
+        // 1st X symbol enabled in ALL cases (single & dual); 2nd X symbol enabled ONLY in DUAL case
+        if (wheelResultFirstXObject != null) wheelResultFirstXObject.SetActive(true);
+        if (wheelResultSecondXObject != null) wheelResultSecondXObject.SetActive(isBoth);
+
+        // 2. Pre-set Text Fields BEFORE opening:
+        // Bet amount formatted with Sprite Text
+        double bet = gameManager != null ? gameManager.currentBetAmount : 0.01;
+        if (wheelResultBetText != null) wheelResultBetText.text = SlotView.FormatSpriteText(bet.ToString("F2"));
+
+        // Multipliers and Total Win start EMPTY while opening
+        if (wheelResultRedMultiplierText != null) wheelResultRedMultiplierText.text = "";
+        if (wheelResultGreenMultiplierText != null) wheelResultGreenMultiplierText.text = "";
+        if (wheelResultWinAmountText != null) wheelResultWinAmountText.text = "";
+
+        // Setup CanvasGroup for smooth Fade In
+        CanvasGroup cg = wheelResultPopup.GetComponent<CanvasGroup>();
+        if (cg == null) cg = wheelResultPopup.AddComponent<CanvasGroup>();
+
+        cg.DOKill();
+        cg.alpha = 0f;
+
+        if (wheelResultPopupRect == null && wheelResultPopup != null)
+        {
+            wheelResultPopupRect = wheelResultPopup.GetComponent<RectTransform>();
+        }
+
+        Vector2 finalPos = new Vector2(0f, 63f);
+        if (wheelResultPopupRect != null)
+        {
+            wheelResultPopupRect.DOKill();
+            wheelResultPopupRect.anchoredPosition = Vector2.zero; // Starts from 0,0,0 center
+            wheelResultPopupRect.localScale = Vector3.zero; // Starts from scale 0
+        }
+
+        // Initial zero scales for staggered child pop/bounce elements
+        if (wheelResultRedDummy != null)
+        {
+            Transform tr = wheelResultRedDummy.transform;
+            tr.DOKill();
+            tr.localScale = Vector3.zero;
+        }
+
+        if (wheelResultGreenDummy != null)
+        {
+            Transform tr = wheelResultGreenDummy.transform;
+            tr.DOKill();
+            tr.localScale = Vector3.zero;
+        }
+
+        if (wheelResultAreaPanel != null)
+        {
+            wheelResultAreaPanel.DOKill();
+            wheelResultAreaPanel.localScale = Vector3.zero;
+        }
+
+        wheelResultPopup.SetActive(true);
+        AudioManager.Instance?.PlayPopupOpen();
+
+        // Stage 1: Main Popup Container Pop & Bounce from (0,0,0) center to final position (0,63)
+        bool openDone = false;
+        cg.DOFade(1f, 0.25f).SetEase(Ease.OutQuad);
+
+        if (wheelResultPopupRect != null)
+        {
+            wheelResultPopupRect.DOAnchorPos(finalPos, wheelPopupOpenDuration).SetEase(Ease.OutBack);
+            wheelResultPopupRect.DOScale(Vector3.one, wheelPopupOpenDuration)
+                .SetEase(Ease.OutBack)
+                .OnComplete(() => openDone = true);
+        }
+        else
+        {
+            openDone = true;
+        }
+
+        // Stage 2: Staggered Dummy Wheels Pop & Bounce (Red wheel first, Green wheel second in all scenarios)
+        StartCoroutine(StaggeredDummyWheelPopBounce());
+
+        // Stage 3: Staggered Result Area Panel Pop & Bounce
+        StartCoroutine(StaggeredResultAreaPopBounce(isBoth));
+
+        yield return new WaitUntil(() => openDone);
+
+        // Wait brief instant after popup is fully open before showing numbers & starting count-up
+        yield return new WaitForSeconds(0.15f);
+
+        // Stage 4: Sequential Multiplier Text Display (Formatted with Sprite Assets)
+        if (isBoth)
+        {
+            if (wheelResultRedMultiplierText != null)
+                wheelResultRedMultiplierText.text = SlotView.FormatSpriteText(bonusData.redWheelValue.ToString("F0"));
+
+            yield return new WaitForSeconds(0.25f);
+
+            if (wheelResultGreenMultiplierText != null)
+                wheelResultGreenMultiplierText.text = SlotView.FormatSpriteText(bonusData.greenWheelValue.ToString("F0"));
+        }
+        else if (isRed)
+        {
+            if (wheelResultRedMultiplierText != null)
+                wheelResultRedMultiplierText.text = SlotView.FormatSpriteText(bonusData.redWheelValue.ToString("F0"));
+        }
+        else
+        {
+            if (wheelResultGreenMultiplierText != null)
+                wheelResultGreenMultiplierText.text = SlotView.FormatSpriteText(bonusData.greenWheelValue.ToString("F0"));
+        }
+
+        yield return new WaitForSeconds(0.15f);
+
+        // Stage 5: Count-Up Animation for Total Win Amount using Sprite Asset formatting (from 0 to totalWinAmount)
+        if (wheelResultWinAmountText != null && bonusData.totalWinAmount > 0)
+        {
+            wheelResultWinAmountText.text = SlotView.FormatSpriteText("0.00");
+            bool countDone = false;
+
+            DOVirtual.Float(0f, (float)bonusData.totalWinAmount, 1.0f, (val) =>
+            {
+                if (wheelResultWinAmountText != null)
+                {
+                    wheelResultWinAmountText.text = SlotView.FormatSpriteText(val.ToString("N2"));
+                }
+            }).OnComplete(() =>
+            {
+                if (wheelResultWinAmountText != null)
+                {
+                    wheelResultWinAmountText.text = SlotView.FormatSpriteText(bonusData.totalWinAmount.ToString("N2"));
+                }
+                countDone = true;
+            });
+
+            yield return new WaitUntil(() => countDone);
+        }
+        else if (wheelResultWinAmountText != null)
+        {
+            wheelResultWinAmountText.text = SlotView.FormatSpriteText(bonusData.totalWinAmount.ToString("N2"));
+        }
+    }
+
+    private IEnumerator StaggeredDummyWheelPopBounce()
+    {
+        // 1st Wheel (Red) pops & bounces
+        if (wheelResultRedDummy != null)
+        {
+            yield return new WaitForSeconds(0.08f);
+            Transform tr = wheelResultRedDummy.transform;
+            tr.DOKill();
+            tr.DOScale(Vector3.one, 0.35f).SetEase(Ease.OutBack);
+        }
+
+        // 2nd Wheel (Green) pops & bounces with separate staggered delay
+        if (wheelResultGreenDummy != null)
+        {
+            yield return new WaitForSeconds(0.08f);
+            Transform tr = wheelResultGreenDummy.transform;
+            tr.DOKill();
+            tr.DOScale(Vector3.one, 0.35f).SetEase(Ease.OutBack);
+        }
+    }
+
+    private IEnumerator StaggeredResultAreaPopBounce(bool isBoth)
+    {
+        float delay = isBoth ? 0.24f : 0.18f;
+        yield return new WaitForSeconds(delay);
+
+        if (wheelResultAreaPanel != null)
+        {
+            wheelResultAreaPanel.DOKill();
+            wheelResultAreaPanel.DOScale(Vector3.one, 0.35f).SetEase(Ease.OutBack);
+        }
+    }
+
+    private IEnumerator CloseWheelResultPopupRoutine()
+    {
+        AudioManager.Instance?.PlayPopupClose();
+
+        CanvasGroup cg = wheelResultPopup != null ? wheelResultPopup.GetComponent<CanvasGroup>() : null;
+        if (cg != null)
+        {
+            cg.DOKill();
+            cg.DOFade(0f, wheelPopupCloseDuration).SetEase(Ease.InQuad);
+        }
+
+        bool closeDone = false;
+        if (wheelResultPopupRect != null)
+        {
+            wheelResultPopupRect.DOKill();
+            wheelResultPopupRect.DOAnchorPos(Vector2.zero, wheelPopupCloseDuration).SetEase(Ease.InBack);
+            wheelResultPopupRect.DOScale(Vector3.zero, wheelPopupCloseDuration)
+                .SetEase(Ease.InBack)
+                .OnComplete(() =>
+                {
+                    if (wheelResultPopup != null) wheelResultPopup.SetActive(false);
+                    closeDone = true;
+                });
+        }
+        else
+        {
+            if (wheelResultPopup != null) wheelResultPopup.SetActive(false);
+            closeDone = true;
+        }
+
+        yield return new WaitUntil(() => closeDone);
+    }
+
+    private IEnumerator ShowWheelResultPopupRoutine(DualWheelsBonusData bonusData, bool isRed, bool isGreen, bool isBoth, System.Action onTakePressed)
+    {
+        // Disable TAKE button interactable while popup opens and animates
+        SetButtonInteractable(uwpTakeButton, uwpTakeButtonPortrait, false);
+
+        yield return StartCoroutine(OpenWheelResultPopupRoutine(bonusData, isRed, isGreen, isBoth));
+
+        // Enable TAKE button interactable after all animations and win counting finish
+        SetButtonInteractable(uwpTakeButton, uwpTakeButtonPortrait, true);
+
+        bool takePressed = false;
+        UnityEngine.Events.UnityAction clickAction = () => takePressed = true;
+
+        if (uwpTakeButton != null) uwpTakeButton.onClick.AddListener(clickAction);
+        if (uwpTakeButtonPortrait != null) uwpTakeButtonPortrait.onClick.AddListener(clickAction);
+
+        Button bgBtn = wheelResultPopup != null ? wheelResultPopup.GetComponent<Button>() : null;
+        if (bgBtn != null) bgBtn.onClick.AddListener(clickAction);
+
+        // Wait strictly for user to press TAKE button (NO AUTO-CLOSE)
+        while (!takePressed)
+        {
+            yield return null;
+        }
+
+        if (uwpTakeButton != null) uwpTakeButton.onClick.RemoveListener(clickAction);
+        if (uwpTakeButtonPortrait != null) uwpTakeButtonPortrait.onClick.RemoveListener(clickAction);
+        if (bgBtn != null) bgBtn.onClick.RemoveListener(clickAction);
+
+        yield return StartCoroutine(CloseWheelResultPopupRoutine());
+        onTakePressed?.Invoke();
+    }
+
+    private IEnumerator StaggeredDummyWheelPunch(bool isRed, bool isGreen, bool isBoth)
+    {
+        yield return new WaitForSeconds(dummyWheelStaggerDelay);
+
+        if ((isRed || isBoth) && wheelResultRedDummy != null)
+        {
+            RectTransform rTr = wheelResultRedDummy.GetComponent<RectTransform>();
+            if (rTr != null)
+            {
+                rTr.DOKill();
+                rTr.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.35f, 2, 0.5f);
+            }
+        }
+
+        if ((isGreen || isBoth) && wheelResultGreenDummy != null)
+        {
+            RectTransform gTr = wheelResultGreenDummy.GetComponent<RectTransform>();
+            if (gTr != null)
+            {
+                gTr.DOKill();
+                gTr.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.35f, 2, 0.5f);
+            }
+        }
     }
 
     #endregion
