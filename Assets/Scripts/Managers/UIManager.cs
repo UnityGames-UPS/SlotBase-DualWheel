@@ -180,22 +180,25 @@ public class UIManager : MonoBehaviour
     [Header("Guide Panel - Portrait")]
     [SerializeField] private Button guideOpenButtonPortrait;
 
-    [Header("Game Rules Dynamic Texts")]
+    [Header("Game Rules Dynamic Texts - 9 Symbols")]
     [SerializeField] private TMP_Text totalLineCountText;
-    [SerializeField] private TMP_Text ruleSymbol0Text;
-    [SerializeField] private TMP_Text ruleSymbol1Text;
-    [SerializeField] private TMP_Text ruleSymbol2Text;
-    [SerializeField] private TMP_Text ruleSymbol3Text;
-    [SerializeField] private TMP_Text ruleSymbol4Text;
-    [SerializeField] private TMP_Text ruleSymbol5Text;
-    [SerializeField] private TMP_Text ruleSymbol6Text;
-    [SerializeField] private TMP_Text ruleSymbol7Text;
-    [SerializeField] private TMP_Text ruleSymbol8Text;
-    [SerializeField] private TMP_Text ruleSymbol9Text;
+    [SerializeField] private TMP_Text ruleRed3XText;      // Symbol ID 1
+    [SerializeField] private TMP_Text ruleBlue2XText;     // Symbol ID 2
+    [SerializeField] private TMP_Text ruleBlue7Text;      // Symbol ID 3
+    [SerializeField] private TMP_Text ruleWhite7Text;     // Symbol ID 4
+    [SerializeField] private TMP_Text ruleWhite7BarText;  // Symbol ID 5
+    [SerializeField] private TMP_Text ruleRed7Text;       // Symbol ID 6
+    [SerializeField] private TMP_Text ruleTripleBarText;  // Symbol ID 7
+    [SerializeField] private TMP_Text ruleDoubleBarText;  // Symbol ID 8
+    [SerializeField] private TMP_Text ruleSingleBarText;  // Symbol ID 9
 
-    [Header("Free Spin Count Display - Game Screen")]
-    [SerializeField] private GameObject freeSpinCountContainer;
-    [SerializeField] private TMP_Text remainingFreeSpinsText;
+    [Header("Game Rules Dynamic Texts - Any Payouts")]
+    [SerializeField] private TMP_Text ruleAnyWildText;
+    [SerializeField] private TMP_Text ruleAny7Text;
+    [SerializeField] private TMP_Text ruleAnyBarText;
+    [SerializeField] private TMP_Text ruleAnyOneRed3XText;
+    [SerializeField] private TMP_Text ruleAnyOneBlue2XText;
+
 
     [Header("Ping Display")]
     [SerializeField] private TMP_Text pingText;
@@ -331,7 +334,6 @@ public class UIManager : MonoBehaviour
         if (starFountain != null) starFountain.StopStarBurst();
         if (universalWinPopup) universalWinPopup.SetActive(false);
 
-        if (freeSpinCountContainer) freeSpinCountContainer.SetActive(false);
         StopWheelBonusEffects();
         var redInit = GetRedWheelController();
         if (redInit != null) redInit.ResetWheelEffects();
@@ -1125,25 +1127,7 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
-    #region Free Spins Flow
 
-    internal void OnFreeSpinsStarted(int spins)
-    {
-    }
-
-    internal void OnFreeSpinsTriggered(int spinsAwarded)
-    {
-    }
-
-    internal void OnFreeSpinsEnded(double serverTotalRoundWin, int serverTotalSpinsUsed)
-    {
-    }
-
-    internal void UpdateFreeSpinCount(int playedSpins, int totalSpins = -1)
-    {
-    }
-
-    #endregion
 
     #region Expand / Shrink
 
@@ -1306,45 +1290,42 @@ public class UIManager : MonoBehaviour
 
     private void UpdateGameRulesDynamicTexts()
     {
-        if (gameManager.gameConfig == null) return;
+        if (gameManager == null || gameManager.gameConfig == null) return;
 
         if (totalLineCountText != null)
         {
             totalLineCountText.text = gameManager.gameConfig.paylineCount.ToString();
         }
 
-        TMP_Text[] symbolTexts = {
-            ruleSymbol0Text, ruleSymbol1Text, ruleSymbol2Text, ruleSymbol3Text,
-            ruleSymbol4Text, ruleSymbol5Text, ruleSymbol6Text, ruleSymbol7Text,
-            ruleSymbol8Text, ruleSymbol9Text
-        };
+        SetRuleSymbolText(1, ruleRed3XText);
+        SetRuleSymbolText(2, ruleBlue2XText);
+        SetRuleSymbolText(3, ruleBlue7Text);
+        SetRuleSymbolText(4, ruleWhite7Text);
+        SetRuleSymbolText(5, ruleWhite7BarText);
+        SetRuleSymbolText(6, ruleRed7Text);
+        SetRuleSymbolText(7, ruleTripleBarText);
+        SetRuleSymbolText(8, ruleDoubleBarText);
+        SetRuleSymbolText(9, ruleSingleBarText);
 
-        if (gameManager.gameConfig.symbols != null)
+        if (gameManager.gameConfig.anyPayouts != null)
         {
-            for (int i = 0; i < symbolTexts.Length; i++)
-            {
-                if (symbolTexts[i] == null) continue;
+            var any = gameManager.gameConfig.anyPayouts;
+            if (ruleAnyWildText != null) ruleAnyWildText.text = $"X{any.anyWilds.ToString("0.###")}";
+            if (ruleAny7Text != null) ruleAny7Text.text = $"X{any.any7.ToString("0.###")}";
+            if (ruleAnyBarText != null) ruleAnyBarText.text = $"X{any.anyBar.ToString("0.###")}";
+            if (ruleAnyOneRed3XText != null) ruleAnyOneRed3XText.text = $"X{any.anyOneRed3X.ToString("0.###")}";
+            if (ruleAnyOneBlue2XText != null) ruleAnyOneBlue2XText.text = $"X{any.anyOneBlue2X.ToString("0.###")}";
+        }
+    }
 
-                var symbol = gameManager.gameConfig.symbols.Find(s => s.id == i);
-                if (symbol != null && symbol.multipliers != null && symbol.multipliers.Count > 0)
-                {
-                    double originalBetAmount = gameManager.currentBetAmount;
-                    string fullText = "";
-                    
-                    int currentMatch = 5;
-                    for (int m = 0; m < symbol.multipliers.Count; m++)
-                    {
-                        double win = symbol.multipliers[m];
-                        string line = $"{currentMatch}     {win.ToString("0.###")}";
-                        if (m == 0) fullText = line;
-                        else fullText += $"\n{line}";
-                        
-                        currentMatch--;
-                    }
-                    
-                    symbolTexts[i].text = fullText;
-                }
-            }
+    private void SetRuleSymbolText(int symbolId, TMP_Text textComponent)
+    {
+        if (textComponent == null || gameManager.gameConfig.symbols == null) return;
+        var symbol = gameManager.gameConfig.symbols.Find(s => s.id == symbolId);
+        if (symbol != null && symbol.multipliers != null && symbol.multipliers.Count > 0)
+        {
+            double payout = symbol.multipliers[0];
+            textComponent.text = $"X{payout.ToString("0.###")}";
         }
     }
 

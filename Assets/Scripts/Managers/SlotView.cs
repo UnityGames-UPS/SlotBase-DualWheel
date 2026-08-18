@@ -175,17 +175,38 @@ public class SlotView : MonoBehaviour
         }
     }
 
-    internal void HideSymbolInfoCard()
-    {
-        if (symbolInfoCard != null) symbolInfoCard.HideCard();
-    }
-
     internal void OnBetChanged()
     {
         if (symbolInfoCard != null && symbolInfoCard.gameObject.activeSelf)
         {
             symbolInfoCard.RefreshCard(gameManager);
         }
+    }
+
+    private Dictionary<Image, int> imageToSymbolIdMap = new Dictionary<Image, int>();
+
+    private void SetImageSymbol(Image img, int symbolId)
+    {
+        if (img == null) return;
+        img.sprite = GetSymbolSprite(symbolId);
+        imageToSymbolIdMap[img] = symbolId;
+    }
+
+    private int GetRandomNonBlankSymbolId(List<int> nonBlankIds = null)
+    {
+        if (nonBlankIds == null || nonBlankIds.Count == 0)
+        {
+            nonBlankIds = new List<int>();
+            if (symbolSprites != null)
+            {
+                for (int i = 1; i < symbolSprites.Length; i++)
+                {
+                    if (symbolSprites[i] != null) nonBlankIds.Add(i);
+                }
+            }
+        }
+        if (nonBlankIds.Count == 0) return 1;
+        return nonBlankIds[Random.Range(0, nonBlankIds.Count)];
     }
 
     internal void OnSymbolClicked(int col, int row, RectTransform symbolRect)
@@ -196,30 +217,48 @@ public class SlotView : MonoBehaviour
             return;
         }
 
-        if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count)
+        if (col >= reelImagesList.Count) return;
+
+        var reel = reelImagesList[col];
+        if (reel == null || reel.images == null) return;
+
+        float customYOffset = 0f;
+        if (reelTransforms != null && col < reelTransforms.Length && reelTransforms[col] != null)
         {
-            return;
+            float reelY = reelTransforms[col].localPosition.y;
+            bool isCase1ReelPos = Mathf.Abs(reelY - (-160f)) < 30f;
+            bool isCase1Matrix = (currentDisplayMatrix != null && col < currentDisplayMatrix.Count && 
+                                  currentDisplayMatrix[col] != null && currentDisplayMatrix[col].Count >= 3 && 
+                                  currentDisplayMatrix[col][1] != 0);
+
+            if (isCase1ReelPos || isCase1Matrix)
+            {
+                if (row == 0) customYOffset = -10f;      // 7th image: -10 Y offset
+                else if (row == 2) customYOffset = 10f;  // 9th image: +10 Y offset
+            }
         }
 
-        var colMatrix = currentDisplayMatrix[col];
-        if (colMatrix == null || colMatrix.Count < 3) return;
-
-        bool isCase1 = colMatrix[1] != 0;
-
-        int symbolId = 0;
-        if (isCase1)
+        int imageIndex = 6 + row;
+        if (imageIndex < reel.images.Count && reel.images[imageIndex] != null)
         {
-            if (row == 1) symbolId = colMatrix[1];
-        }
-        else
-        {
-            if (row == 0) symbolId = colMatrix[0];
-            else if (row == 2 || row == 1) symbolId = colMatrix[2];
+            Image clickedImage = reel.images[imageIndex];
+            if (imageToSymbolIdMap.TryGetValue(clickedImage, out int symbolId))
+            {
+                if (symbolInfoCard != null)
+                {
+                    symbolInfoCard.ShowCard(symbolId, col, row, symbolRect, gameManager, customYOffset);
+                }
+                return;
+            }
         }
 
-        if (symbolId != 0 && symbolInfoCard != null)
+        if (currentDisplayMatrix != null && col < currentDisplayMatrix.Count && row < currentDisplayMatrix[col].Count)
         {
-            symbolInfoCard.ShowCard(symbolId, col, row, symbolRect, gameManager);
+            int fallbackId = currentDisplayMatrix[col][row];
+            if (symbolInfoCard != null)
+            {
+                symbolInfoCard.ShowCard(fallbackId, col, row, symbolRect, gameManager, customYOffset);
+            }
         }
     }
 
@@ -272,8 +311,6 @@ public class SlotView : MonoBehaviour
                 symbolSprites[i] = defaultSprite;
             }
         }
-
-        // Build the animation sprite arrays for all symbol IDs
         animationSpriteArrays = new List<Sprite>[15];
         animationSpriteArrays[1] = animSpritesRed3X;
         animationSpriteArrays[2] = animSpritesBlue2X;
@@ -408,9 +445,13 @@ public class SlotView : MonoBehaviour
             reservedIndices.Add(7);
             reservedIndices.Add(8);
 
-            reel.images[7].sprite = GetSymbolSprite(visibleSymbolIds[1]); // 8th element (mid icon)
-            reel.images[6].sprite = GetRandomNonBlankSprite();            // 7th element (random top)
-            reel.images[8].sprite = GetRandomNonBlankSprite();            // 9th element (random bottom)
+            int midId = (visibleSymbolIds != null && visibleSymbolIds.Count > 1) ? visibleSymbolIds[1] : 1;
+            int topId = GetRandomNonBlankSymbolId(nonBlankIds);
+            int botId = GetRandomNonBlankSymbolId(nonBlankIds);
+
+            SetImageSymbol(reel.images[7], midId); // 8th element (mid icon)
+            SetImageSymbol(reel.images[6], topId); // 7th element (random top)
+            SetImageSymbol(reel.images[8], botId); // 9th element (random bottom)
         }
         else
         {
@@ -422,8 +463,8 @@ public class SlotView : MonoBehaviour
             int topSymbolId = (visibleSymbolIds != null && visibleSymbolIds.Count > 0) ? visibleSymbolIds[0] : 1;
             int botSymbolId = (visibleSymbolIds != null && visibleSymbolIds.Count > 2) ? visibleSymbolIds[2] : 1;
 
-            reel.images[6].sprite = GetSymbolSprite(topSymbolId); // 7th element (1st row result)
-            reel.images[7].sprite = GetSymbolSprite(botSymbolId); // 8th element (3rd row result)
+            SetImageSymbol(reel.images[6], topSymbolId); // 7th element (1st row result)
+            SetImageSymbol(reel.images[7], botSymbolId); // 8th element (3rd row result)
         }
 
         // Populate all other buffer images (outside reserved indices) with non-blank symbols
@@ -433,7 +474,7 @@ public class SlotView : MonoBehaviour
 
             int symId = nonBlankIds[bufferIndex % nonBlankIds.Count];
             bufferIndex++;
-            reel.images[i].sprite = GetSymbolSprite(symId);
+            SetImageSymbol(reel.images[i], symId);
         }
 
         if (isInitial && reelTransforms[columnIndex] != null)
@@ -1250,7 +1291,7 @@ public class SlotView : MonoBehaviour
             var tmpText = textTransform.GetComponent<TMPro.TMP_Text>();
             if (tmpText != null)
             {
-                tmpText.text = winAmount.ToString("0.###");
+                tmpText.text = FormatSpriteText(winAmount);
             }
             AnimateTextScaleAppear(textTransform);
         }
@@ -1284,9 +1325,47 @@ public class SlotView : MonoBehaviour
     {
         if (phase1TotalWinText != null)
         {
-            phase1TotalWinText.text = totalWinAmount.ToString("0.###");
+            phase1TotalWinText.text = FormatSpriteText(totalWinAmount);
             AnimateTextScaleAppear(phase1TotalWinText.transform);
         }
+    }
+
+    /// <summary>
+    /// Converts input string/number into TextMeshPro sprite asset tags based on mapping:
+    /// 0..9 -> <sprite=0>..<sprite=9>
+    /// '='  -> <sprite=10>
+    /// '.'  -> <sprite=11>
+    /// </summary>
+    public static string FormatSpriteText(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (char c in input)
+        {
+            if (c >= '0' && c <= '9')
+            {
+                sb.Append("<sprite=").Append(c - '0').Append(">");
+            }
+            else if (c == '=')
+            {
+                sb.Append("<sprite=10>");
+            }
+            else if (c == '.' || c == ',')
+            {
+                sb.Append("<sprite=11>");
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString();
+    }
+
+    public static string FormatSpriteText(double amount)
+    {
+        return FormatSpriteText(amount.ToString("0.###"));
     }
 
     private void HidePhase1TotalWinText()

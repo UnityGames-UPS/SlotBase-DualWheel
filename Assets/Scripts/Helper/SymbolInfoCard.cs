@@ -16,11 +16,6 @@ public class SymbolInfoCard : MonoBehaviour
     [Tooltip("Sprite used when card is on the LEFT side of symbol (3rd, 4th, 5th reel - pointer points right)")]
     [SerializeField] private Sprite leftSideCardSprite;
 
-    [Tooltip("Alternative inspector alias for pointer pointing left (used for right side placement)")]
-    [SerializeField] private Sprite leftPointSprite;
-    [Tooltip("Alternative inspector alias for pointer pointing right (used for left side placement)")]
-    [SerializeField] private Sprite rightPointSprite;
-
     [Header("Layout & Auto-Close Settings")]
     [Tooltip("Horizontal spacing from symbol center")]
     [SerializeField] private float xSpacing = 160f;
@@ -41,21 +36,10 @@ public class SymbolInfoCard : MonoBehaviour
         rectTransform = GetComponent<RectTransform>();
     }
 
-    private Sprite GetRightSideSprite()
-    {
-        if (rightSideCardSprite != null) return rightSideCardSprite;
-        if (leftPointSprite != null) return leftPointSprite;
-        return null;
-    }
+    private Sprite GetRightSideSprite() => rightSideCardSprite;
+    private Sprite GetLeftSideSprite() => leftSideCardSprite;
 
-    private Sprite GetLeftSideSprite()
-    {
-        if (leftSideCardSprite != null) return leftSideCardSprite;
-        if (rightPointSprite != null) return rightPointSprite;
-        return null;
-    }
-
-    public void ShowCard(int symbolId, int colIndex, int rowIndex, RectTransform symbolRect, GameManager gameManager)
+    public void ShowCard(int symbolId, int colIndex, int rowIndex, RectTransform symbolRect, GameManager gameManager, float customYOffset = 0f)
     {
         // Toggle hide if clicking the exact same symbol position while visible
         if (gameObject.activeSelf && activeCol == colIndex && activeRow == rowIndex)
@@ -86,7 +70,7 @@ public class SymbolInfoCard : MonoBehaviour
         Vector3 localPos = transform.parent != null ? transform.parent.InverseTransformPoint(symbolWorldPos) : symbolWorldPos;
 
         float offsetDir = (colIndex < 2) ? Mathf.Abs(xSpacing) : -Mathf.Abs(xSpacing);
-        rectTransform.localPosition = new Vector3(localPos.x + offsetDir, localPos.y + yOffset, localPos.z);
+        rectTransform.localPosition = new Vector3(localPos.x + offsetDir, localPos.y + yOffset + customYOffset, localPos.z);
 
         // 2. Change Sprite Based on Side
         if (cardBgImage != null)
@@ -139,27 +123,25 @@ public class SymbolInfoCard : MonoBehaviour
 
         string symbolNameLower = symbolInfo != null ? (symbolInfo.name ?? "").ToLower() : "";
 
-        // Check if special symbol: Wild, Wheel/Spin (IDs 11, 12, 13, 14), MoneyBag
-        bool isWild = (symbolId == 10) || (symbolInfo != null && symbolInfo.isWild) || symbolNameLower.Contains("wild");
-        bool isWheel = (symbolId >= 11 && symbolId <= 14) || symbolNameLower.Contains("wheel") || symbolNameLower.Contains("spin");
-        bool isMoneyBag = (symbolId == 15) || symbolNameLower.Contains("moneybag") || symbolNameLower.Contains("money bag");
+        // Check if special symbol: Wild (IDs 1, 2), Wheel/Spin (IDs 9..14 or wheel/spin names)
+        bool isWild = (symbolId == 1 || symbolId == 2) || (symbolInfo != null && symbolInfo.isWild) || symbolNameLower.Contains("wild");
+        bool isWheel = (symbolId >= 11 && symbolId <= 14) || 
+                       (symbolId >= 9 && symbolId <= 14 && (symbolInfo == null || symbolInfo.multipliers == null || symbolInfo.multipliers.Count == 0)) || 
+                       symbolNameLower.Contains("wheel") || 
+                       symbolNameLower.Contains("spin");
 
-        if (isWild || isWheel || isMoneyBag)
+        if (isWild || isWheel)
         {
             // SPECIAL SYMBOL: Text alignment CENTER
             infoText.alignment = TextAlignmentOptions.Center;
             infoText.enableWordWrapping = true;
             if (isWheel)
             {
-                infoText.text = "Wheel symbols trigger the Dual Wheel Bonus feature.";
-            }
-            else if (isMoneyBag)
-            {
-                infoText.text = "3 Money Bag symbols trigger the Money Bag Collect feature.";
+                infoText.text = "2 Bonus Symbols + Wheel Bonus Triggers Lucky Wheels";
             }
             else if (isWild)
             {
-                infoText.text = "Substitutes for all symbols except Wheel and Money Bag.";
+                infoText.text = "Substitutes For Any Other Symbol Except For Bonus Symbols And Wheel Symbols";
             }
         }
         else
@@ -190,13 +172,11 @@ public class SymbolInfoCard : MonoBehaviour
             if (symbolInfo != null && symbolInfo.multipliers != null && symbolInfo.multipliers.Count > 0)
             {
                 List<string> lines = new List<string>();
-                int currentMatch = 5;
 
                 for (int m = 0; m < symbolInfo.multipliers.Count; m++)
                 {
                     double payout = symbolInfo.multipliers[m] * betFactor;
-                    lines.Add($"<color=#FFC700>X{currentMatch}</color>   {payout.ToString("0.###")}");
-                    currentMatch--;
+                    lines.Add($"<color=#FFC700>X3</color>   {payout.ToString("0.###")}");
                 }
 
                 infoText.text = string.Join("\n", lines);

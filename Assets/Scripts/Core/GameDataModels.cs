@@ -78,9 +78,9 @@ public class AnyPayoutsData
     public double anyBar;
     public double wilds2x;
     public double wilds3x;
-    public double anyRed3X;
+    public double anyOneRed3X;
     public double anyWilds;
-    public double anyBlue2X;
+    public double anyOneBlue2X;
 }
 
 [Serializable]
