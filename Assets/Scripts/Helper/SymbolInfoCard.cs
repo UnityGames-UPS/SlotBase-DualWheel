@@ -123,12 +123,9 @@ public class SymbolInfoCard : MonoBehaviour
 
         string symbolNameLower = symbolInfo != null ? (symbolInfo.name ?? "").ToLower() : "";
 
-        // Check if special symbol: Wild (IDs 1, 2), Wheel/Spin (IDs 9..14 or wheel/spin names)
-        bool isWild = (symbolId == 1 || symbolId == 2) || (symbolInfo != null && symbolInfo.isWild) || symbolNameLower.Contains("wild");
-        bool isWheel = (symbolId >= 11 && symbolId <= 14) || 
-                       (symbolId >= 9 && symbolId <= 14 && (symbolInfo == null || symbolInfo.multipliers == null || symbolInfo.multipliers.Count == 0)) || 
-                       symbolNameLower.Contains("wheel") || 
-                       symbolNameLower.Contains("spin");
+        // Check if special symbol: Wild (IDs 1, 2), Wheel/Spin (IDs 10..13)
+        bool isWild = (symbolId == 1 || symbolId == 2);
+        bool isWheel = (symbolId >= 10 && symbolId <= 13);
 
         if (isWild || isWheel)
         {

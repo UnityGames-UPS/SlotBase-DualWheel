@@ -305,6 +305,7 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator TriggerWinPopupWithDelay(float delay, SpinResult result)
     {
+        if (result == null) yield break;
         double totalPay = GetTotalPay();
         double multiplier = totalPay > 0 ? (result.winAmount / totalPay) : 0;
         if (multiplier < bigWinMultiplierThreshold)
@@ -372,7 +373,16 @@ public class GameManager : MonoBehaviour
     {
         AudioManager.Instance?.Play3UspinWinLineLoop();
 
-        yield return new WaitForSeconds(1.0f);
+        bool animDone = false;
+        if (slotView != null)
+        {
+            slotView.AnimateDualWheelWin(() => { animDone = true; });
+            yield return new WaitUntil(() => animDone);
+        }
+        else
+        {
+            yield return new WaitForSeconds(1.0f);
+        }
 
         if (uiManager != null)
         {
@@ -404,19 +414,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator DelayScatterTriggerResult()
-    {
-        // Play special feature trigger sound AFTER all reels have stopped
-        AudioManager.Instance?.Play3UspinWinLineLoop();
 
-        // Start scatter animations together AFTER all reels have stopped
-        // Using 4 loops to match the 6-second delay (4 * 1.5s = 6s)
-        slotView.AnimateAllScatters(4);
-
-        // Wait for scatter hit animations to play
-        yield return new WaitForSeconds(3.5f);
-        ProcessSpinResult();
-    }
 
 
 
@@ -620,21 +618,18 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns true if at least one scatter symbol appears anywhere in the result matrix.
-    /// Uses the server-configured scatterSymbolId (default 12) as the reference ID.
+    /// Returns true if at least one scatter/wheel symbol (IDs 10..13) appears anywhere in the result matrix.
     /// </summary>
     private bool ResultMatrixHasScatter(List<List<int>> matrix)
     {
         if (matrix == null) return false;
-
-        int scatterId = gameConfig != null ? gameConfig.scatterSymbolId : 12;
 
         foreach (var col in matrix)
         {
             if (col == null) continue;
             foreach (int sym in col)
             {
-                if (sym == scatterId) return true;
+                if (sym >= 10 && sym <= 13) return true;
             }
         }
 

@@ -300,7 +300,7 @@ public class GameConfig
     public int wildSymbolId = 1;      // Red3X (1) or Blue2X (2)
 
     // Scatter / Feature configuration
-    public int scatterSymbolId = 11;   // Spin ID 11
+    public int scatterSymbolId = 10;   // Spin ID 10
 
     public double baseCoinValue = 1.0;
     public int betMultiplier = 1;
@@ -514,8 +514,8 @@ public static class InitDataConverter
                     name = serverSymbol.name,
                     group = serverSymbol.group,
                     multipliers = new List<double>(),
-                    isWild = (serverSymbol.group != null && serverSymbol.group.Contains("wild")) || serverSymbol.id == 1 || serverSymbol.id == 2,
-                    isScatter = (serverSymbol.name != null && (serverSymbol.name.ToLower().Contains("wheel") || serverSymbol.name.ToLower().Contains("spin"))) || serverSymbol.id >= 11,
+                    isWild = (serverSymbol.id == 1 || serverSymbol.id == 2),
+                    isScatter = (serverSymbol.id >= 10 && serverSymbol.id <= 13),
                     minMatch = serverSymbol.minMatch > 0 ? serverSymbol.minMatch : 3
                 };
 
@@ -788,7 +788,9 @@ public static class InitDataConverter
                         {
                             if (pair.Count >= 2)
                             {
-                                flatPositions.Add(pair[0] * reelCount + pair[1]);
+                                int row = pair[0];
+                                int col = pair[1];
+                                flatPositions.Add(row * reelCount + col);
                             }
                             else if (pair.Count == 1)
                             {
