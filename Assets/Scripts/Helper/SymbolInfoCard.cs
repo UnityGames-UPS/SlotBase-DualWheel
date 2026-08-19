@@ -121,9 +121,6 @@ public class SymbolInfoCard : MonoBehaviour
             symbolInfo = gameManager.gameConfig.symbols.Find(s => s.id == symbolId);
         }
 
-        string symbolNameLower = symbolInfo != null ? (symbolInfo.name ?? "").ToLower() : "";
-
-        // Check if special symbol: Wild (IDs 1, 2), Wheel/Spin (IDs 10..13)
         bool isWild = (symbolId == 1 || symbolId == 2);
         bool isWheel = (symbolId >= 10 && symbolId <= 13);
 

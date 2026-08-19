@@ -12,10 +12,12 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameManager gameManager;
     [SerializeField] private PopupManager popupManager;
     [SerializeField] private JSFunctCalls jsFunctCalls;
+    [SerializeField] private SlotView slotView;
+    [SerializeField] private OrientationChange orientationChange;
+    [SerializeField] private OCController ocController;
 
     [Header("Loading & Intro")]
     [SerializeField] private GameObject gameScreen;
-    [SerializeField] private GameObject gameLogoObject;
 
 
 
@@ -91,13 +93,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject wheelResultGreenRowObject;
     [SerializeField] private TMP_Text wheelResultRedMultiplierText;
     [SerializeField] private TMP_Text wheelResultGreenMultiplierText;
-    [SerializeField] private GameObject wheelResultFirstXObject;  // Enabled in ALL cases (single & dual)
-    [SerializeField] private GameObject wheelResultSecondXObject; // Enabled ONLY in DUAL case
+    [SerializeField] private GameObject wheelResultFirstXObject;
+    [SerializeField] private GameObject wheelResultSecondXObject;
     [SerializeField] private TMP_Text wheelResultWinAmountText;
     [SerializeField] private float wheelPopupOpenDuration = 0.4f;
     [SerializeField] private float wheelPopupCloseDuration = 0.3f;
     [SerializeField] private float dummyWheelStaggerDelay = 0.15f;
-    [SerializeField] private float numbersPanelStaggerDelay = 0.25f;
+    [SerializeField] private float wheelResultPopupDelay = 2.0f;
 
     [Header("Take Button")]
     [SerializeField] private Button uwpTakeButton;
@@ -191,15 +193,15 @@ public class UIManager : MonoBehaviour
 
     [Header("Game Rules Dynamic Texts - 9 Symbols")]
     [SerializeField] private TMP_Text totalLineCountText;
-    [SerializeField] private TMP_Text ruleRed3XText;      // Symbol ID 1
-    [SerializeField] private TMP_Text ruleBlue2XText;     // Symbol ID 2
-    [SerializeField] private TMP_Text ruleBlue7Text;      // Symbol ID 3
-    [SerializeField] private TMP_Text ruleWhite7Text;     // Symbol ID 4
-    [SerializeField] private TMP_Text ruleWhite7BarText;  // Symbol ID 5
-    [SerializeField] private TMP_Text ruleRed7Text;       // Symbol ID 6
-    [SerializeField] private TMP_Text ruleTripleBarText;  // Symbol ID 7
-    [SerializeField] private TMP_Text ruleDoubleBarText;  // Symbol ID 8
-    [SerializeField] private TMP_Text ruleSingleBarText;  // Symbol ID 9
+    [SerializeField] private TMP_Text ruleRed3XText;
+    [SerializeField] private TMP_Text ruleBlue2XText;
+    [SerializeField] private TMP_Text ruleBlue7Text;
+    [SerializeField] private TMP_Text ruleWhite7Text;
+    [SerializeField] private TMP_Text ruleWhite7BarText;
+    [SerializeField] private TMP_Text ruleRed7Text;
+    [SerializeField] private TMP_Text ruleTripleBarText;
+    [SerializeField] private TMP_Text ruleDoubleBarText;
+    [SerializeField] private TMP_Text ruleSingleBarText;
 
     [Header("Game Rules Dynamic Texts - Any Payouts")]
     [SerializeField] private TMP_Text ruleAnyWildText;
@@ -238,17 +240,9 @@ public class UIManager : MonoBehaviour
     private Tween balanceTween;
     private Tween winTween;
 
-    // Optimistic balance: the locally-deducted balance shown while the spin is in flight
-    private double optimisticBalance = 0;
-    private bool hasOptimisticBalance = false;
-
-    [Header("Rapid Stop Cooldown")]
-    [Tooltip("Seconds the player must wait before pressing Stop again after an immediate stop.")]
     [SerializeField] private float rapidStopCooldown = 1f;
     private float lastRapidStopTime = -99f;
 
-    private int currentRulesPage = 0;
-    private bool isPageAnimating;
     [Header("UI State")]
     private double currentWinDisplayValue = 0;
     private bool isSpecialWinActive = false;
@@ -313,7 +307,7 @@ public class UIManager : MonoBehaviour
     {
         if (wheelScreen == null || !wheelScreen.activeInHierarchy || wheelSpinTriggered) return;
 
-        var oc = Object.FindFirstObjectByType<OrientationChange>();
+        var oc = GetOrientationChange();
         bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
 
         if (wheelSpinButton) wheelSpinButton.gameObject.SetActive(!isPortraitMode);
@@ -637,7 +631,9 @@ public class UIManager : MonoBehaviour
         UpdateBalanceDisplay();
         if (result != null)
         {
-            UpdateWinDisplay(result.winAmount);
+            double displayWin = result.winAmount - result.GetTotalFeatureDeferredWins();
+            if (displayWin < 0) displayWin = 0;
+            UpdateWinDisplay(displayWin);
         }
     }
 
@@ -645,7 +641,9 @@ public class UIManager : MonoBehaviour
     {
         if (result != null)
         {
-            UpdateWinDisplay(result.winAmount);
+            double displayWin = result.winAmount - result.GetTotalFeatureDeferredWins();
+            if (displayWin < 0) displayWin = 0;
+            UpdateWinDisplay(displayWin);
         }
         UpdateBalanceDisplay();
 
@@ -719,7 +717,6 @@ public class UIManager : MonoBehaviour
 
         if (gameManager.IsSpinning())
         {
-            // Rapid-stop cooldown: prevent the player from spamming the stop button
             if (Time.unscaledTime - lastRapidStopTime < rapidStopCooldown)
                 return;
 
@@ -1261,7 +1258,6 @@ public class UIManager : MonoBehaviour
     private void AnimateBalanceUpdate(double newBalance, double startBalance = -1f, float durationOverride = -1f)
     {
         if (balanceTween != null) balanceTween.Kill();
-        hasOptimisticBalance = false;
         SetTMPText(balanceText, balanceTextPortrait, "BALANCE : " + FormatAmount(newBalance));
     }
 
@@ -1407,20 +1403,26 @@ public class UIManager : MonoBehaviour
         return green != null ? green.transform : null;
     }
 
+    private OrientationChange GetOrientationChange()
+    {
+        if (orientationChange != null) return orientationChange;
+        orientationChange = Object.FindFirstObjectByType<OrientationChange>();
+        return orientationChange;
+    }
+
+    private OCController GetOCController()
+    {
+        if (ocController != null) return ocController;
+        ocController = Object.FindFirstObjectByType<OCController>();
+        return ocController;
+    }
+
     private Transform GetSlotObjectTransform()
     {
         if (slotObject != null) return slotObject;
-        var oc = Object.FindFirstObjectByType<OCController>();
+        var oc = GetOCController();
         if (oc != null && oc.SlotObject != null) return oc.SlotObject;
-        var slotView = Object.FindFirstObjectByType<SlotView>();
         return slotView != null ? slotView.transform : null;
-    }
-
-    private Transform GetWheelParentTransform()
-    {
-        if (wheelParent != null) return wheelParent;
-        var redTr = GetRedWheelTransform();
-        return redTr != null ? redTr.parent : null;
     }
 
     private IEnumerator PlayTitleImageAnimationLoop(GameObject titleObj)
@@ -1515,7 +1517,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        var oc = Object.FindFirstObjectByType<OrientationChange>();
+        var oc = GetOrientationChange();
         bool isPortrait = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
 
         if (landscapeTopBarObject != null) landscapeTopBarObject.SetActive(!isPortrait);
@@ -1606,6 +1608,8 @@ public class UIManager : MonoBehaviour
         UpdateNewWheelSpinButtonsVisibility();
 
         // 1. Slot BG moves down from current Y to -1000 and top bar is disabled
+        if (slotView != null) slotView.DisableAllOverlays();
+
         UpdateTopBarVisibility(false);
         if (targetSlotBG != null)
         {
@@ -1777,14 +1781,10 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // 8. Handle result popup & balance update after 1.0s delay
-        yield return new WaitForSeconds(1.0f);
+        // 8. Handle result popup & balance update after delay
+        yield return new WaitForSeconds(wheelResultPopupDelay);
 
-        bool takeClicked = false;
-        yield return StartCoroutine(ShowWheelResultPopupRoutine(bonusData, isRedTriggered, isGreenTriggered, isBothTriggered, () =>
-        {
-            takeClicked = true;
-        }));
+        yield return StartCoroutine(ShowWheelResultPopupRoutine(bonusData, isRedTriggered, isGreenTriggered, isBothTriggered, null));
 
             if (gameManager != null && gameManager.playerData != null)
             {
@@ -1793,7 +1793,7 @@ public class UIManager : MonoBehaviour
 
                 double targetWin = (gameManager.lastResult != null && gameManager.lastResult.grandTotalWin > 0)
                     ? gameManager.lastResult.grandTotalWin
-                    : ((gameManager.lastResult != null ? gameManager.lastResult.winAmount : 0) + bonusData.totalWinAmount);
+                    : (gameManager.lastResult != null ? gameManager.lastResult.winAmount : bonusData.totalWinAmount);
 
                 AnimateWinUpdate(targetWin);
                 AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
@@ -1809,6 +1809,8 @@ public class UIManager : MonoBehaviour
             if (wheelScreen) wheelScreen.SetActive(false);
 
         // 9. Restore Slot BG position & Wheel positions/scales
+        if (slotView != null) slotView.DisableAllOverlays();
+
         if (targetSlotBG != null)
         {
             targetSlotBG.DOKill();
@@ -2223,31 +2225,6 @@ public class UIManager : MonoBehaviour
         onTakePressed?.Invoke();
     }
 
-    private IEnumerator StaggeredDummyWheelPunch(bool isRed, bool isGreen, bool isBoth)
-    {
-        yield return new WaitForSeconds(dummyWheelStaggerDelay);
-
-        if ((isRed || isBoth) && wheelResultRedDummy != null)
-        {
-            RectTransform rTr = wheelResultRedDummy.GetComponent<RectTransform>();
-            if (rTr != null)
-            {
-                rTr.DOKill();
-                rTr.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.35f, 2, 0.5f);
-            }
-        }
-
-        if ((isGreen || isBoth) && wheelResultGreenDummy != null)
-        {
-            RectTransform gTr = wheelResultGreenDummy.GetComponent<RectTransform>();
-            if (gTr != null)
-            {
-                gTr.DOKill();
-                gTr.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.35f, 2, 0.5f);
-            }
-        }
-    }
-
     #endregion
 
     #region Bonus Wheel Effects
@@ -2262,7 +2239,6 @@ public class UIManager : MonoBehaviour
                 wheelAnticlockwiseRotationTween = null;
             }
 
-            // Continuous anticlockwise rotation (positive Z rotation 0 to 360 degrees)
             wheelAnticlockwiseRotationTween = wheelAnticlockwiseRotatingObject
                 .DORotate(new Vector3(0f, 0f, 360f), wheelRotationDuration, RotateMode.FastBeyond360)
                 .SetEase(Ease.Linear)

@@ -63,7 +63,6 @@ public class StarFountain : MonoBehaviour
         StopStarBurst();
         if (starPrefab == null) return;
 
-        // Pre-warm stars mid-flight so star container is densely populated immediately on pop open
         int prewarmCount = Random.Range(25, 40);
         for (int i = 0; i < prewarmCount; i++)
         {
@@ -90,6 +89,8 @@ public class StarFountain : MonoBehaviour
             }
         }
     }
+
+
 
     private void RecycleStar(GameObject star)
     {

@@ -17,8 +17,6 @@ public class ImageAnimation : MonoBehaviour
         TWO_PHASE
     }
 
-    public static ImageAnimation Instance;
-
     public List<Sprite> textureArray;
     public Image rendererDelegate;
     public bool useSharedMaterial = true;
@@ -68,10 +66,6 @@ public class ImageAnimation : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
         EnsureRenderer();
         if (StartOnAwake)
         {
@@ -383,47 +377,6 @@ public class ImageAnimation : MonoBehaviour
         else
         {
             Invoke(nameof(AnimationProcess), delayBetweenAnimation);
-        }
-    }
-
-    public void PlayAnimation()
-    {
-        StartAnimation();
-    }
-
-    public void Play()
-    {
-        StartAnimation();
-    }
-
-    public void PauseAnimation()
-    {
-        if (currentAnimationState == ImageState.PLAYING)
-        {
-            CancelInvoke(nameof(AnimationProcess));
-            pauseStartTime = Time.time;
-            currentAnimationState = ImageState.PAUSED;
-        }
-    }
-
-    public void ResumeAnimation()
-    {
-        if (currentAnimationState == ImageState.PAUSED)
-        {
-            if (useDynamicFramerate)
-            {
-                animStartTime += (Time.time - pauseStartTime);
-                currentAnimationState = ImageState.PLAYING;
-                ScheduleNextFrame();
-            }
-            else
-            {
-                if (!IsInvoking(nameof(AnimationProcess)))
-                {
-                    Invoke(nameof(AnimationProcess), delayBetweenAnimation);
-                    currentAnimationState = ImageState.PLAYING;
-                }
-            }
         }
     }
 

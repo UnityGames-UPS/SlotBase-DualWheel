@@ -20,7 +20,6 @@ public class GameManager : MonoBehaviour
 
     [Header("Win Settings")]
     [SerializeField] private double bigWinMultiplierThreshold = 500.0;
-    public double BigWinMultiplierThreshold => bigWinMultiplierThreshold;
 
     internal GameConfig gameConfig;
     internal PlayerData playerData;
@@ -190,7 +189,6 @@ public class GameManager : MonoBehaviour
         currentState = GameState.Spinning;
         stopRequested = false;
 
-        // Deduct total pay from balance on spin start
         playerData.balance -= GetTotalPay();
         if (playerData.balance < 0) playerData.balance = 0;
 
@@ -218,8 +216,6 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
 
-        // Player pressed Stop manually — hold for 0.5s so the reels keep
-        // spinning briefly before snapping, giving clear visual feedback.
         if (stopRequested)
         {
             yield return new WaitForSeconds(0.5f);
@@ -238,7 +234,6 @@ public class GameManager : MonoBehaviour
             {
                 slotView.QuickStop(lastResult.resultMatrix);
 
-                // Wait for the snap animation to settle before processing result
                 float quickStopWaitTime = 0.4f;
                 yield return new WaitForSeconds(quickStopWaitTime);
 
@@ -287,7 +282,6 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                // For normal wins, trigger UI update immediately and enable controls
                 uiManager.OnSpinStopping(lastResult);
                 uiManager.EnableControlsAfterWinAnimation();
                 uiManager.OnSpinCompleted(lastResult);
@@ -338,7 +332,6 @@ public class GameManager : MonoBehaviour
             double totalPay = GetTotalPay();
             double multiplier = totalPay > 0 ? (lastResult.winAmount / totalPay) : 0;
 
-            // Only update UI here if it wasn't already updated in OnReelsStoppedComplete (multiplier < bigWinMultiplierThreshold)
             if (multiplier >= bigWinMultiplierThreshold)
             {
                 uiManager.OnSpinStopping(lastResult);
@@ -350,7 +343,6 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator ProcessSpecialFeaturesAfterWin()
     {
-        // Wait for special win popup to finish before starting special features
         while (waitingForSpecialWin || uiManager.IsSpecialWinActive)
         {
             yield return null;
@@ -378,6 +370,7 @@ public class GameManager : MonoBehaviour
         {
             slotView.AnimateDualWheelWin(() => { animDone = true; });
             yield return new WaitUntil(() => animDone);
+            slotView.DisableAllOverlays();
         }
         else
         {
@@ -425,7 +418,6 @@ public class GameManager : MonoBehaviour
         float delayTime = currentSpinSpeed == SpinSpeed.QuickSpin ? 0.3f : 0.5f;
         yield return new WaitForSeconds(delayTime);
 
-        // Wait for special win popup using the flag and active state
         while (waitingForSpecialWin || uiManager.IsSpecialWinActive)
         {
             yield return null;
@@ -483,8 +475,6 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                // Before requesting the next spin, verify the player can still afford it.
-                // If not, stop autoplay (restores all UI) then show the popup.
                 double totalPay = GetTotalPay();
                 if (playerData.balance < totalPay)
                 {
@@ -513,7 +503,6 @@ public class GameManager : MonoBehaviour
     {
         currentSpinSpeed = speed;
 
-        // If currently stopping and user switches to QuickSpin, immediately trigger QuickStop
         if (currentState == GameState.Stopping && speed == SpinSpeed.QuickSpin)
         {
             if (slotView != null && lastResult != null && lastResult.resultMatrix != null)
@@ -533,7 +522,6 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.Idle) return;
 
-        // Check balance BEFORE locking any UI — if insufficient, show popup and bail.
         double totalPay = GetTotalPay();
         if (playerData.balance < totalPay)
         {
@@ -557,15 +545,6 @@ public class GameManager : MonoBehaviour
         uiManager.OnAutoPlayStopped();
     }
 
-    internal bool ShouldResumeAutoPlay()
-    {
-        return false;
-    }
-
-    internal void ResumeAutoPlay()
-    {
-    }
-
     #endregion
 
 
@@ -586,8 +565,6 @@ public class GameManager : MonoBehaviour
         }
 
         currentState = GameState.Idle;
-        // Note: The disconnection popup is shown by SocketIOManager.OnSocketDisconnected()
-        // to avoid duplicates. GameManager only cleans up state here.
     }
 
     internal void ExitGame()
@@ -606,34 +583,9 @@ public class GameManager : MonoBehaviour
         return currentBetAmount * divisor;
     }
 
-    internal bool CanAffordBet()
-    {
-        double totalPay = GetTotalPay();
-        return playerData.balance >= totalPay;
-    }
-
     internal bool IsSpinning()
     {
         return currentState == GameState.Spinning || currentState == GameState.Stopping;
-    }
-
-    /// <summary>
-    /// Returns true if at least one scatter/wheel symbol (IDs 10..13) appears anywhere in the result matrix.
-    /// </summary>
-    private bool ResultMatrixHasScatter(List<List<int>> matrix)
-    {
-        if (matrix == null) return false;
-
-        foreach (var col in matrix)
-        {
-            if (col == null) continue;
-            foreach (int sym in col)
-            {
-                if (sym >= 10 && sym <= 13) return true;
-            }
-        }
-
-        return false;
     }
 
     #endregion

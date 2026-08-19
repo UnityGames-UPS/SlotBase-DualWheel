@@ -52,9 +52,11 @@ public class SpinButtonHoldHandler : MonoBehaviour, IPointerDownHandler, IPointe
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Cancel the hold if the player moves the mouse/finger off the button
-        if (!isPointerDown) return;
-        
+        ResetHoldState();
+    }
+
+    private void ResetHoldState()
+    {
         isPointerDown = false;
         if (holdCoroutine != null)
         {

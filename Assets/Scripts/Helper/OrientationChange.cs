@@ -156,7 +156,6 @@ public class OrientationChange : MonoBehaviour
             currentMode = OrientationMode.DesktopPortrait;
         }
 
-        // Apply Rotation: DesktopPortrait gets -90 degrees rotation, MobilePortrait & Landscape get 0 degrees.
         Quaternion targetRotation = (currentMode == OrientationMode.DesktopPortrait) ? Quaternion.Euler(0, 0, -90) : Quaternion.identity;
         if (UIWrapper != null)
         {
@@ -164,7 +163,6 @@ public class OrientationChange : MonoBehaviour
             rotationTween = UIWrapper.DOLocalRotateQuaternion(targetRotation, transitionDuration).SetEase(Ease.OutCubic);
         }
 
-        // Calculate CanvasScaler Match Width/Height
         if (CanvasScaler != null)
         {
             Vector2 refRes = (currentMode == OrientationMode.MobilePortrait) ? new Vector2(1080f, 1920f) : new Vector2(1920f, 1080f);
@@ -178,7 +176,6 @@ public class OrientationChange : MonoBehaviour
 
         Debug.Log($"[OrientationChange] Dimensions: {width}x{height}, Mode: {currentMode}, isLandscape: {isLandscape}, isMobile: {isMobile}");
 
-        // Notify Listeners (including OCController)
         OnOrientationChanged?.Invoke(currentMode, width, height);
         OnOrientationChangedInstance?.Invoke(currentMode, width, height);
     }
@@ -197,10 +194,8 @@ public class OrientationChange : MonoBehaviour
             float scaleH = (float)height / 1920f;
             return (scaleW <= scaleH) ? 0f : 1f;
         }
-        else // DesktopPortrait (Rotated Landscape mode)
+        else
         {
-            // Canvas reference resolution is 1920x1080, UIWrapper rotated -90 degrees.
-            // Rotated UI bounds are 1080 wide by 1920 high.
             float targetScale = Mathf.Min((float)width / 1080f, (float)height / 1920f);
             float logWidth = Mathf.Log((float)width / 1920f, 2f);
             float logHeight = Mathf.Log((float)height / 1080f, 2f);

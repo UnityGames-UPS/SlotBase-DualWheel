@@ -155,21 +155,17 @@ public class AudioManager : MonoBehaviour
         bgMusicSource.Play();
     }
 
-    internal void PlayMainBg() => PlayBgMusic();
-
     internal void StopBgMusic()
     {
         StopSource(bgMusicSource);
     }
 
-    // 2. Bet Plus / Bet Minus (one for both)
     internal void PlayBetPlusMinus()
     {
         PlayUISound(clipBetPlusMinus);
     }
 
     internal void PlayBetPlus()  => PlayBetPlusMinus();
-    internal void PlayBetMinus() => PlayBetPlusMinus();
 
     // 3. Max Bet Reached
     internal void PlayMaxBetReached()
@@ -223,15 +219,11 @@ public class AudioManager : MonoBehaviour
     internal void PlayAutoplayStop() => PlayPrimaryActionButton();
     internal void PlayWheelStart()   => PlayPrimaryActionButton();
 
-    // 7. General Button Click
     internal void PlayButton()
     {
         PlayUISound(clipGeneralButtonClick);
     }
 
-    internal void PlayGeneralButtonClick() => PlayButton();
-
-    // 8. Popup Open Close Sound
     internal void PlayPopupOpenClose()
     {
         PlayUISound(clipPopupOpenClose != null ? clipPopupOpenClose : clipGeneralButtonClick);
@@ -240,13 +232,11 @@ public class AudioManager : MonoBehaviour
     internal void PlayPopupClose() => PlayPopupOpenClose();
     internal void PlayPopupOpen()  => PlayPopupOpenClose();
 
-    // 9. Autoplay Panel Open Sound
     internal void PlayAutoplayPanelOpen()
     {
         PlayUISound(clipAutoplayPanelOpen != null ? clipAutoplayPanelOpen : clipPopupOpenClose);
     }
 
-    // 10. Bonus Wheel & MoneyBag Feature Open Sound (loop until feature enabled)
     internal void PlayFeatureOpenLoop()
     {
         if (clipFeatureOpenLoop == null) return;
@@ -258,13 +248,8 @@ public class AudioManager : MonoBehaviour
         if (bgMusicSource != null && bgMusicSource.clip == clipFeatureOpenLoop)
         {
             StopBgMusic();
-            PlayBgMusic(); // Resume main BG
+            PlayBgMusic();
         }
-    }
-
-    // 11. FreeSpin BG (no-op)
-    internal void PlayFreeSpinBg()
-    {
     }
 
     // 12. Bonus Wheel Spin Segment Tick

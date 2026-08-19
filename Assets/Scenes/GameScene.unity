@@ -10382,7 +10382,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c19aed9f414e348fa88b066ee885b5b3, type: 3}
+  m_Sprite: {fileID: 2009121368034082768, guid: 25713c3496d0d4929bbc1ce2f60d3b50, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -21245,7 +21245,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c19aed9f414e348fa88b066ee885b5b3, type: 3}
+  m_Sprite: {fileID: 2009121368034082768, guid: 25713c3496d0d4929bbc1ce2f60d3b50, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -22310,7 +22310,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c19aed9f414e348fa88b066ee885b5b3, type: 3}
+  m_Sprite: {fileID: 2009121368034082768, guid: 25713c3496d0d4929bbc1ce2f60d3b50, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -23028,8 +23028,10 @@ MonoBehaviour:
   gameManager: {fileID: 1206269883}
   popupManager: {fileID: 1363796882}
   jsFunctCalls: {fileID: 1504510397}
+  slotView: {fileID: 1483144622}
+  orientationChange: {fileID: 1353408117}
+  ocController: {fileID: 873413469}
   gameScreen: {fileID: 451360943}
-  gameLogoObject: {fileID: 524679665}
   betAmountText: {fileID: 2087443015}
   betPlusButton: {fileID: 125909518}
   betMinusButton: {fileID: 699784534}
@@ -23091,18 +23093,9 @@ MonoBehaviour:
   wheelPopupOpenDuration: 0.4
   wheelPopupCloseDuration: 0.3
   dummyWheelStaggerDelay: 0.15
-  numbersPanelStaggerDelay: 0.25
-  universalWinPopup: {fileID: 2134208242}
-  universalWinPopupRect: {fileID: 1762514895}
-  uwpCongratulationsTitle: {fileID: 1530662805}
-  uwpYouWonSubtitle: {fileID: 1404793015}
-  uwpBigWinTitle: {fileID: 1370834178}
-  uwpWinAmountText: {fileID: 1901981585}
-  uwpFreeSpinCountText: {fileID: 1217989767}
-  uwpFreeSpinObject: {fileID: 920880404}
+  wheelResultPopupDelay: 2
   uwpTakeButton: {fileID: 1729874833}
   uwpTakeButtonPortrait: {fileID: 877728123}
-  starFountain: {fileID: 0}
   spinButton: {fileID: 173060499}
   stopButton: {fileID: 344352412}
   spinButtonPortrait: {fileID: 598712220}
@@ -23177,8 +23170,8 @@ MonoBehaviour:
   ruleAnyWildText: {fileID: 1262539347}
   ruleAny7Text: {fileID: 902573623}
   ruleAnyBarText: {fileID: 1605966144}
-  ruleAnyOneRed3XText: {fileID: 1410376677}
-  ruleAnyOneBlue2XText: {fileID: 434780441}
+  ruleAnyOneRed3XText: {fileID: 434780441}
+  ruleAnyOneBlue2XText: {fileID: 1410376677}
   pingText: {fileID: 758464196}
   pingTextPortrait: {fileID: 460680268}
   grandJackpotText: {fileID: 1039016733}
@@ -23194,7 +23187,6 @@ MonoBehaviour:
   expandButtonPortrait: {fileID: 2090453117}
   shrinkButtonPortrait: {fileID: 944934390}
   rapidStopCooldown: 1
-  uwpAutoCloseDelay: 5
 --- !u!4 &885496185
 Transform:
   m_ObjectHideFlags: 0
@@ -30804,7 +30796,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f521a04de7f494272a617b2719edd271, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SocketIOManager
-  testToken: ed3cefd71a4e4d28b0a64bd4bdda0a85
+  testToken: a1b647970f494bffabcb789edbd66dcb
   gameManager: {fileID: 1206269883}
   uiManager: {fileID: 885496184}
   popupManager: {fileID: 1363796882}
@@ -35013,8 +35005,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 250417937}
   - {fileID: 2104110620}
+  - {fileID: 250417937}
   - {fileID: 1784204650}
   - {fileID: 1456201113}
   - {fileID: 1883834542}
@@ -35947,10 +35939,6 @@ MonoBehaviour:
   spinSpeed: 3000
   reelStartStagger: 0.08
   reelStopStagger: 0.15
-  anticipationUpDistance: 30
-  anticipationUpDuration: 0.12
-  winPopDuration: 0.4
-  winPopRepeat: 3
   stopOvershootDistance: 80
   stopOvershootDuration: 0.2
   stopSettleDuration: 0.3
@@ -39667,7 +39655,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c19aed9f414e348fa88b066ee885b5b3, type: 3}
+  m_Sprite: {fileID: 2009121368034082768, guid: 25713c3496d0d4929bbc1ce2f60d3b50, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -52046,7 +52034,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c19aed9f414e348fa88b066ee885b5b3, type: 3}
+  m_Sprite: {fileID: 2009121368034082768, guid: 25713c3496d0d4929bbc1ce2f60d3b50, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1

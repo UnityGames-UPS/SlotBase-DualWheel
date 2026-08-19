@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 
 #region Server Communication Models
@@ -19,7 +18,7 @@ public class InitData
 [Serializable]
 public class JackpotData
 {
-    public JackpotValues values;//jackpotfeature
+    public JackpotValues values;
 
 }
 
@@ -55,7 +54,6 @@ public class ServerFeatures
     public DualWheelsFeature dualWheels;
     public AnyPayoutsData anyPayouts;
 
-    // Backward compatibility fields
     public MoneyBagFeature moneyBag;
     public FreeGamesFeature freeGames;
     public int betMultiplier;
@@ -103,7 +101,7 @@ public class FreeGamesFeature
 [Serializable]
 public class ExtraSpinsData
 {
-    [JsonProperty("2")] public int _2; // Keep for safety/compatibility with UI
+    [JsonProperty("2")] public int _2;
     [JsonProperty("3")] public int _3;
     [JsonProperty("4")] public int _4;
     [JsonProperty("5")] public int _5;
@@ -127,7 +125,7 @@ public class ServerSymbolInfo
     public int id;
     public string name;
     public string group;
-    public List<double> multiplier; // Keep for fallback compatibility
+    public List<double> multiplier;
     public double payout;
     public string description;
     public int minMatch;
@@ -139,16 +137,12 @@ public class ServerPlayer
     public double balance;
 }
 
-// ============================================================================
-// Server Response Models - Match actual server JSON structure
-// ============================================================================
-
 [Serializable]
 public class ServerSpinResponse
 {
     public string id = "spinResult";
     public bool success;
-    public List<List<string>> matrix; // Root level matrix sent by server (3x3)
+    public List<List<string>> matrix;
     public ServerPlayerBalance player;
     public ServerPayload payload;
 }
@@ -156,20 +150,19 @@ public class ServerSpinResponse
 [Serializable]
 public class ServerPlayerBalance
 {
-    public double? balance; // Nullable because server sends null
+    public double? balance;
 }
 
 [Serializable]
 public class ServerPayload
 {
-    public List<List<string>> reels;        // Keep for fallback compatibility
-    public double totalWin;                  // Keep for fallback compatibility
+    public List<List<string>> reels;
+    public double totalWin;
     public double winAmount;
     public double grandTotalWin;
     public List<ServerWinLine> winningLines;
     public ServerDualWheelsBonus dualWheelsBonus;
 
-    // Existing payload fields
     public int scatterCount;
     public bool scatterTriggered;
     public bool isRoundOver;
@@ -263,10 +256,6 @@ public class ServerFreeGamesResult
     public double totalFreeGamesWin;
 }
 
-// ============================================================================
-// Client-Side Spin Request
-// ============================================================================
-
 [Serializable]
 public class SpinRequest
 {
@@ -296,11 +285,9 @@ public class GameConfig
     public List<double> availableBets;
     public List<SymbolInfo> symbols;
 
-    // Wild configuration
-    public int wildSymbolId = 1;      // Red3X (1) or Blue2X (2)
+    public int wildSymbolId = 1;
 
-    // Scatter / Feature configuration
-    public int scatterSymbolId = 10;   // Spin ID 10
+    public int scatterSymbolId = 10;
 
     public double baseCoinValue = 1.0;
     public int betMultiplier = 1;
@@ -310,7 +297,6 @@ public class GameConfig
     public int initialFreeSpins = 12;
     public ExtraSpinsData extraSpinsData;
 
-    // Features
     public DualWheelsFeature dualWheels;
     public AnyPayoutsData anyPayouts;
 }
@@ -342,7 +328,7 @@ public class PlayerData
 [Serializable]
 public class SpinResult
 {
-    public List<List<int>> resultMatrix;  // Client uses int matrix (3 reels x 3 rows)
+    public List<List<int>> resultMatrix;
     public double winAmount;
     public double grandTotalWin;
     public List<WinLine> winLines;
@@ -352,25 +338,18 @@ public class SpinResult
     public OverlayScatterData overlayScatterData;
     public Dictionary<string, int> stickyWilds;
 
-    // Server-authoritative free spin state
     public int serverSpinsRemaining;
     public int serverSpinsUsed;
     public int serverTotalSpins;
     public double serverTotalRoundWin;
     public bool isRoundOver;
     
-    // Server-authoritative bonus feature data
     public DualWheelsBonusData dualWheelsBonusData;
     public MoneyBagResultData moneyBagData;
 
     public double GetDualWheelsWin()
     {
         return (dualWheelsBonusData != null && dualWheelsBonusData.isTriggered) ? dualWheelsBonusData.totalWinAmount : 0;
-    }
-
-    public double GetMoneyBagWin()
-    {
-        return 0;
     }
 
     public double GetTotalFeatureDeferredWins()
@@ -396,7 +375,7 @@ public class WinLine
 {
     public int lineId;
     public int symbolId;
-    public List<int> positions;  // Flat list: [row * 3 + col]
+    public List<int> positions;
     public double winAmount;
 }
 
@@ -473,20 +452,17 @@ public enum SpinSpeed
 
 public enum WinPopupType
 {
-    RegularWin,         // Normal credit win
-    BigWin,             // Big win
-    FreeSpinTrigger,    // Free spins awarded
-    MoneyBagCollect,    // Feature collect
-    FreeSpinComplete    // All free spins completed
+    RegularWin,
+    BigWin,
+    FreeSpinTrigger,
+    MoneyBagCollect,
+    FreeSpinComplete
 }
 
 #endregion
 
 #region Helper Classes for Conversion
 
-/// <summary>
-/// Converts server data to client GameConfig
-/// </summary>
 public static class InitDataConverter
 {
     internal static GameConfig ConvertToGameConfig(InitData serverData)
@@ -561,9 +537,6 @@ public static class InitDataConverter
         };
     }
 
-    /// <summary>
-    /// Converts server response to client SpinResult
-    /// </summary>
     internal static SpinResult ConvertServerResponseToSpinResult(ServerSpinResponse serverResponse, double currentBalance, double betAmount, GameConfig gameConfig)
     {
         double winAmountVal = 0;
@@ -610,7 +583,7 @@ public static class InitDataConverter
 
         double grandTotalWinVal = (serverResponse.payload != null && serverResponse.payload.grandTotalWin > 0)
             ? serverResponse.payload.grandTotalWin 
-            : (winAmountVal + featureWins);
+            : Math.Max(winAmountVal, featureWins);
 
         var result = new SpinResult
         {

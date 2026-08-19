@@ -42,7 +42,6 @@ public class SocketIOManager : MonoBehaviour
     [SerializeField] private bool enablePingDebug = false;
 
     private Coroutine pingCoroutine;
-    private float lastPongTime;
     private float pingSendTime;
     private bool waitingForPong;
     private int missedPongs;
@@ -175,7 +174,6 @@ public class SocketIOManager : MonoBehaviour
         isConnected = true;
         waitingForPong = false;
         missedPongs = 0;
-        lastPongTime = Time.time;
         pingSendTime = Time.realtimeSinceStartup;
 
         if (popupManager != null)
@@ -521,7 +519,6 @@ public class SocketIOManager : MonoBehaviour
     private void OnPongReceived(string data)
     {
         waitingForPong = false;
-        lastPongTime = Time.time;
 
         if (pingSendTime > 0f)
         {

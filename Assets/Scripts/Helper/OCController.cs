@@ -107,7 +107,6 @@ public class OCController : MonoBehaviour
             portraitPanelObject.SetActive(isMobilePortrait);
         }
 
-        // 2. Toggle Landscape vs Portrait Background Objects
         if (landscapeBackground != null)
         {
             landscapeBackground.SetActive(!isMobilePortrait);
@@ -117,7 +116,6 @@ public class OCController : MonoBehaviour
             portraitBackground.SetActive(isMobilePortrait);
         }
 
-        // Toggle Wheel Landscape vs Portrait Background Objects
         if (wheelLandscapeBackground != null)
         {
             wheelLandscapeBackground.SetActive(!isMobilePortrait);
@@ -127,14 +125,12 @@ public class OCController : MonoBehaviour
             wheelPortraitBackground.SetActive(isMobilePortrait);
         }
 
-        // 3. Update Canvas Scaler Reference Resolution
         if (canvasScaler != null)
         {
             Vector2 targetRefRes = isMobilePortrait ? portraitReferenceResolution : landscapeReferenceResolution;
             canvasScaler.referenceResolution = targetRefRes;
         }
 
-        // 4. Resize Target RectTransforms
         Vector2 targetSize = isMobilePortrait ? portraitResizedObjectSize : landscapeResizedObjectSize;
         if (resizedObjects != null)
         {
@@ -155,7 +151,6 @@ public class OCController : MonoBehaviour
             }
         }
 
-        // 4b. Resize Target RectTransforms (1920x1080 Landscape, 1920x1920 Portrait)
         Vector2 targetSquareSize = isMobilePortrait ? portraitSquareResizedObjectSize : landscapeSquareResizedObjectSize;
         if (squareResizedObjects != null)
         {
@@ -176,7 +171,6 @@ public class OCController : MonoBehaviour
             }
         }
 
-        // 5. Update Slot Object Scale and Position
         if (slotObject != null)
         {
             Vector3 targetScale = isMobilePortrait ? portraitSlotScale : landscapeSlotScale;
@@ -196,7 +190,6 @@ public class OCController : MonoBehaviour
             }
         }
 
-        // 6. Update Logo Object Scale and Position
         if (logoObject != null)
         {
             Vector3 targetScale = isMobilePortrait ? portraitLogoScale : landscapeLogoScale;
@@ -216,7 +209,6 @@ public class OCController : MonoBehaviour
             }
         }
 
-        // 7. Update Info Page Scroll Object Height (1080 for Landscape, 1920 for Mobile Portrait)
         if (infoPageScrollObject != null)
         {
             float targetHeight = isMobilePortrait ? 1920f : 1080f;

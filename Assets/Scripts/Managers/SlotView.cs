@@ -10,37 +10,37 @@ public class SlotView : MonoBehaviour
     [SerializeField] private GameManager gameManager;
 
     [Header("Symbol Sprites - Assign by Name")]
-    [SerializeField] private Sprite spriteRed3X;              // ID: 1
-    [SerializeField] private Sprite spriteBlue2X;             // ID: 2
-    [SerializeField] private Sprite spriteBlue7;              // ID: 3
-    [SerializeField] private Sprite spriteWhite7;             // ID: 4
-    [SerializeField] private Sprite spriteWhite7Bar;          // ID: 5
-    [SerializeField] private Sprite spriteRed7;               // ID: 6
-    [SerializeField] private Sprite spriteTripleBar;          // ID: 7
-    [SerializeField] private Sprite spriteDoubleBar;          // ID: 8
-    [SerializeField] private Sprite spriteSingleBar;          // ID: 9
-    [SerializeField] private Sprite spriteSpin;               // ID: 11
-    [SerializeField] private Sprite spriteGreenWheel;         // ID: 12
-    [SerializeField] private Sprite spriteDoubleWheel;        // ID: 13
-    [SerializeField] private Sprite spriteRedWheel;           // ID: 14
+    [SerializeField] private Sprite spriteRed3X;
+    [SerializeField] private Sprite spriteBlue2X;
+    [SerializeField] private Sprite spriteBlue7;
+    [SerializeField] private Sprite spriteWhite7;
+    [SerializeField] private Sprite spriteWhite7Bar;
+    [SerializeField] private Sprite spriteRed7;
+    [SerializeField] private Sprite spriteTripleBar;
+    [SerializeField] private Sprite spriteDoubleBar;
+    [SerializeField] private Sprite spriteSingleBar;
+    [SerializeField] private Sprite spriteSpin;
+    [SerializeField] private Sprite spriteGreenWheel;
+    [SerializeField] private Sprite spriteDoubleWheel;
+    [SerializeField] private Sprite spriteRedWheel;
 
     // Internal array built from named sprites
     private Sprite[] symbolSprites;
 
     [Header("Win Animation Sprite Arrays for All Icons")]
-    [SerializeField] private List<Sprite> animSpritesRed3X;           // ID: 1
-    [SerializeField] private List<Sprite> animSpritesBlue2X;          // ID: 2
-    [SerializeField] private List<Sprite> animSpritesBlue7;           // ID: 3
-    [SerializeField] private List<Sprite> animSpritesWhite7;          // ID: 4
-    [SerializeField] private List<Sprite> animSpritesWhite7Bar;       // ID: 5
-    [SerializeField] private List<Sprite> animSpritesRed7;            // ID: 6
-    [SerializeField] private List<Sprite> animSpritesTripleBar;       // ID: 7
-    [SerializeField] private List<Sprite> animSpritesDoubleBar;       // ID: 8
-    [SerializeField] private List<Sprite> animSpritesSingleBar;       // ID: 9
-    [SerializeField] private List<Sprite> animSpritesSpin;            // ID: 11
-    [SerializeField] private List<Sprite> animSpritesGreenWheel;      // ID: 12
-    [SerializeField] private List<Sprite> animSpritesDoubleWheel;     // ID: 13
-    [SerializeField] private List<Sprite> animSpritesRedWheel;        // ID: 14
+    [SerializeField] private List<Sprite> animSpritesRed3X;
+    [SerializeField] private List<Sprite> animSpritesBlue2X;
+    [SerializeField] private List<Sprite> animSpritesBlue7;
+    [SerializeField] private List<Sprite> animSpritesWhite7;
+    [SerializeField] private List<Sprite> animSpritesWhite7Bar;
+    [SerializeField] private List<Sprite> animSpritesRed7;
+    [SerializeField] private List<Sprite> animSpritesTripleBar;
+    [SerializeField] private List<Sprite> animSpritesDoubleBar;
+    [SerializeField] private List<Sprite> animSpritesSingleBar;
+    [SerializeField] private List<Sprite> animSpritesSpin;
+    [SerializeField] private List<Sprite> animSpritesGreenWheel;
+    [SerializeField] private List<Sprite> animSpritesDoubleWheel;
+    [SerializeField] private List<Sprite> animSpritesRedWheel;
 
     // Internal array of animation sprite lists
     private List<Sprite>[] animationSpriteArrays;
@@ -52,23 +52,14 @@ public class SlotView : MonoBehaviour
     [SerializeField] private List<ReelImages> reelImagesList;
 
     [Header("Reel Stop Y Positions")]
-    [SerializeField] private float case1StopY = 160f; // Case 1: blank, icon, blank
-    [SerializeField] private float case2StopY = 0f;    // Case 2: icon, blank, icon
+    [SerializeField] private float case1StopY = 160f;
+    [SerializeField] private float case2StopY = 0f;
 
     [Header("Spin Settings")]
     [SerializeField] private float symbolHeight = 100f;
     [SerializeField] private float spinSpeed = 2000f;
     [SerializeField] private float reelStartStagger = 0.08f;
     [SerializeField] private float reelStopStagger = 0.12f;
-
-    [Header("Animation Settings - Casino Style")]
-    [SerializeField] private float anticipationUpDistance = 20f;
-    [SerializeField] private float anticipationUpDuration = 0.12f;
-
-    [Header("Win Animation Settings")]
-    [SerializeField] private float winPopDuration = 0.4f;
-    [SerializeField] private int winPopRepeat = 3;
-
 
     [Header("Stop Animation Settings")]
     [SerializeField] private float stopOvershootDistance = 50f;
@@ -183,7 +174,7 @@ public class SlotView : MonoBehaviour
         SetupSymbolButtons();
     }
 
-    private void DisableAllOverlays()
+    internal void DisableAllOverlays()
     {
         DisableColumns(winAnimationColumns);
         if (winAnimationParent) winAnimationParent.SetActive(false);
@@ -1058,6 +1049,7 @@ public class SlotView : MonoBehaviour
                                     completedCount++;
                                     if (completedCount >= activeWheelAnims.Count)
                                     {
+                                        DisableAllOverlays();
                                         onComplete?.Invoke();
                                     }
                                 }
@@ -1072,94 +1064,12 @@ public class SlotView : MonoBehaviour
 
         if (activeWheelAnims.Count == 0)
         {
+            DisableAllOverlays();
             onComplete?.Invoke();
         }
     }
 
 
-
-    private void AnimateSymbolSingleLoop(int column, int row, int loopCount = 1)
-    {
-        if (column >= reelImagesList.Count) return;
-
-        var reel = reelImagesList[column];
-        if (reel.images == null || reel.images.Count < 3) return;
-
-        int imageIndex = 6 + row;
-        if (imageIndex >= reel.images.Count) return;
-
-        Image symbolImage = reel.images[imageIndex];
-        if (symbolImage == null) return;
-
-        var animGO = WinBox(winAnimationColumns, column, row);
-        if (animGO == null) return;
-
-        ImageAnimation imageAnim = animGO.GetComponent<ImageAnimation>();
-        if (imageAnim == null) return;
-
-        int symbolId = currentDisplayMatrix[column][row];
-        if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) return;
-        if (symbolId >= 10 && symbolId <= 13) return;
-
-        List<Sprite> animSprites = animationSpriteArrays[symbolId];
-        if (animSprites == null || animSprites.Count == 0) return;
-
-        imageAnim.textureArray = animSprites;
-        imageAnim.useDynamicFramerate = true;
-        imageAnim.dynamicLoopDuration = winSymbolLoopDuration;
-
-        Color originalColor = new Color(symbolImage.color.r, symbolImage.color.g, symbolImage.color.b, 1f);
-
-        Sequence seq = DOTween.Sequence();
-        
-        seq.AppendCallback(() => {
-            animGO.SetActive(true);
-            Image animRenderer = imageAnim.rendererDelegate;
-            if (animRenderer != null)
-            {
-                animRenderer.DOKill();
-                Color c = animRenderer.color;
-                animRenderer.color = new Color(c.r, c.g, c.b, 1f);
-            }
-            if (symbolImage != null)
-            {
-                symbolImage.DOKill();
-                symbolImage.gameObject.SetActive(false);
-            }
-            
-            imageAnim.StartAnimation();
-        });
-
-        seq.AppendInterval(winSymbolLoopDuration * loopCount);
-
-        seq.AppendCallback(() => {
-            Image animRenderer = imageAnim != null ? imageAnim.rendererDelegate : null;
-
-            if (animRenderer != null)
-            {
-                animRenderer.DOKill();
-                Color c = animRenderer.color;
-                animRenderer.color = new Color(c.r, c.g, c.b, 1f);
-            }
-
-            if (imageAnim != null) imageAnim.StopAnimation();
-            if (animGO != null)
-            {
-                ResetWinBoxPosition(animGO);
-                animGO.SetActive(false);
-            }
-
-            if (symbolImage != null)
-            {
-                symbolImage.DOKill();
-                Color c = symbolImage.color;
-                symbolImage.color = new Color(c.r, c.g, c.b, originalColor.a);
-                symbolImage.gameObject.SetActive(true);
-            }
-        });
-
-        winTweens.Add(seq);
-    }
 
     #region Win Line Animation
 
@@ -1460,29 +1370,6 @@ public class SlotView : MonoBehaviour
         }
     }
 
-    private void ShowWinLineTextOnIcon(int col, int row, double winAmount)
-    {
-        if (col < 0 || col >= reelImagesList.Count) return;
-        var reel = reelImagesList[col];
-        if (reel.images == null) return;
-        int imageIndex = 6 + row;
-        if (imageIndex >= reel.images.Count) return;
-
-        Image symbolImage = reel.images[imageIndex];
-        if (symbolImage == null) return;
-
-        Transform textTransform = symbolImage.transform.Find("WinLineText");
-        if (textTransform != null)
-        {
-            var tmpText = textTransform.GetComponent<TMPro.TMP_Text>();
-            if (tmpText != null)
-            {
-                tmpText.text = FormatSpriteText(winAmount);
-            }
-            AnimateTextScaleAppear(textTransform);
-        }
-    }
-
     private void HideAllWinLineTexts()
     {
         if (reelImagesList == null) return;
@@ -1593,38 +1480,6 @@ public class SlotView : MonoBehaviour
         seq.Append(textTransform.DOScale(popScale, durationUp).SetEase(Ease.OutQuad));
         seq.Append(textTransform.DOScale(1.0f, durationDown).SetEase(Ease.InQuad));
         winTweens.Add(seq);
-    }
-    private void ResetSymbolScale(int col, int row)
-    {
-        if (col >= reelImagesList.Count) return;
-        var reel = reelImagesList[col];
-        if (reel.images == null) return;
-        int imageIndex = 6 + row;
-        if (imageIndex >= reel.images.Count) return;
-        if (reel.images[imageIndex] != null)
-        {
-            var img = reel.images[imageIndex];
-            img.DOKill();
-            img.transform.localScale = Vector3.one;
-            // Restore alpha to full opacity and re-enable component & GameObject
-            Color c = img.color;
-            img.color = new Color(c.r, c.g, c.b, 1f);
-            img.enabled = true;
-            img.gameObject.SetActive(true);
-        }
-
-        // Also ensure the corresponding animation object is disabled
-        var animGO = WinBox(winAnimationColumns, col, row);
-        if (animGO != null)
-        {
-            ImageAnimation imageAnim = animGO.GetComponent<ImageAnimation>();
-            if (imageAnim != null)
-            {
-                if (imageAnim.rendererDelegate != null) imageAnim.rendererDelegate.DOKill();
-                imageAnim.StopAnimation();
-            }
-            animGO.SetActive(false);
-        }
     }
 
 
@@ -1880,25 +1735,6 @@ public class SlotView : MonoBehaviour
                 }
             }
         }
-    }
-
-    #endregion
-
-    #region Blank Symbol Handling (Simplified 2-Case Architecture)
-
-    private Sprite GetRandomNonBlankSprite()
-    {
-        List<int> nonBlankIds = new List<int>();
-        for (int i = 1; i < symbolSprites.Length; i++)
-        {
-            if (symbolSprites[i] != null)
-            {
-                nonBlankIds.Add(i);
-            }
-        }
-        if (nonBlankIds.Count == 0) return symbolSprites.Length > 1 ? symbolSprites[1] : symbolSprites[0];
-        int randomId = nonBlankIds[Random.Range(0, nonBlankIds.Count)];
-        return GetSymbolSprite(randomId);
     }
 
     #endregion

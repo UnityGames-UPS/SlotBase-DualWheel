@@ -58,9 +58,6 @@ public class WheelSpinController : MonoBehaviour
 
     internal bool IsSpinning => isSpinning;
     internal List<WheelSegmentData> SegmentDataList => segments;
-    public GameObject FullDisableObject => fullDisableObject;
-    public GameObject HalfDisableObject => halfDisableObject;
-    public GameObject ResultShineObject => resultShineObject;
     public Button CenterSpinButton => centerSpinButton;
 
     public void SetFullDisable(bool active)
@@ -85,11 +82,6 @@ public class WheelSpinController : MonoBehaviour
     public void SetCenterSpinButtonInteractable(bool interactable)
     {
         if (centerSpinButton != null) centerSpinButton.interactable = interactable;
-    }
-
-    public void SetCenterSpinButtonActive(bool active)
-    {
-        if (centerSpinButton != null) centerSpinButton.gameObject.SetActive(active);
     }
 
     public void StartBorderAnimation()
