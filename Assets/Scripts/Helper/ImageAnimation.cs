@@ -27,6 +27,8 @@ public class ImageAnimation : MonoBehaviour
     [Header("Dynamic Timing")]
     public bool useDynamicFramerate = false;
     public float dynamicLoopDuration = 1.0f;
+    [Tooltip("Target frame rate (FPS) for smooth animation. When useDynamicFramerate is true, loop count adaptively scales to maintain smooth speed near this FPS.")]
+    public float targetFPS = 24.0f;
     
     public System.Action<int> onLoopComplete;
     private int currentLoopCount = 0;
@@ -56,10 +58,13 @@ public class ImageAnimation : MonoBehaviour
     [Tooltip("How many times Phase 2 should loop (-1 = infinite, 0 = skip phase 2, 1+ = specific count)")]
     public int phase2LoopCount = -1;
 
-    // Two-phase tracking
     private int currentPhase = 1;
     private int phase1CurrentLoop = 0;
     private int phase2CurrentLoop = 0;
+
+    // Time-sync tracking to prevent Invoke drift across active animations
+    private float animStartTime;
+    private float pauseStartTime;
 
     private void Awake()
     {
@@ -101,39 +106,152 @@ public class ImageAnimation : MonoBehaviour
         StopAnimation();
     }
 
+    public void CalculateFrameDelay()
+    {
+        if (textureArray == null || textureArray.Count == 0)
+        {
+            delayBetweenAnimation = 0.0416666679f;
+            return;
+        }
+
+        if (useDynamicFramerate && dynamicLoopDuration > 0f)
+        {
+            int frameCount = textureArray.Count;
+            if (animationMode == AnimationMode.TWO_PHASE)
+            {
+                if (currentPhase == 1 && phase2StartIndex > 0)
+                {
+                    frameCount = phase2StartIndex;
+                }
+                else if (currentPhase == 2 && phase2StartIndex < textureArray.Count)
+                {
+                    frameCount = textureArray.Count - phase2StartIndex;
+                }
+            }
+
+            if (frameCount > 0)
+            {
+                // Dynamic loop duration defines total time for 1 full loop (0th to last frame)
+                delayBetweenAnimation = dynamicLoopDuration / frameCount;
+            }
+            else
+            {
+                delayBetweenAnimation = 0.0416666679f;
+            }
+        }
+        else
+        {
+            float baseFPS = targetFPS > 0f ? targetFPS : (idealFrameRate > 0f ? 1f / idealFrameRate : 24f);
+            float speed = AnimationSpeed > 0 ? AnimationSpeed : 5f;
+            float speedFactor = speed / 5f;
+            delayBetweenAnimation = 1f / (baseFPS * speedFactor);
+            if (delayBetweenAnimation <= 0f) delayBetweenAnimation = 0.0416666679f;
+        }
+    }
+
+    private void ScheduleNextFrame()
+    {
+        if (currentAnimationState != ImageState.PLAYING) return;
+        if (textureArray == null || textureArray.Count == 0) return;
+
+        float nextDelay = delayBetweenAnimation;
+
+        if (useDynamicFramerate && dynamicLoopDuration > 0f)
+        {
+            float elapsedTime = Time.time - animStartTime;
+            int totalFrames = textureArray.Count;
+            if (animationMode == AnimationMode.TWO_PHASE)
+            {
+                totalFrames = (currentPhase == 1) ? phase2StartIndex : (textureArray.Count - phase2StartIndex);
+            }
+
+            if (totalFrames > 0)
+            {
+                float frameDuration = dynamicLoopDuration / totalFrames;
+                float currentFrameProgress = (elapsedTime % dynamicLoopDuration) / dynamicLoopDuration;
+                int currentExpectedFrame = Mathf.Clamp(Mathf.FloorToInt(currentFrameProgress * totalFrames), 0, totalFrames - 1);
+                
+                // Target time for the NEXT frame relative to animStartTime
+                float currentLoopIndex = Mathf.Floor(elapsedTime / dynamicLoopDuration);
+                float nextFrameTargetTime = (currentLoopIndex * dynamicLoopDuration) + ((currentExpectedFrame + 1) * frameDuration);
+                
+                nextDelay = nextFrameTargetTime - elapsedTime;
+                if (nextDelay < 0.001f) nextDelay = 0.001f;
+            }
+        }
+
+        Invoke(nameof(AnimationProcess), nextDelay);
+    }
+
     private void AnimationProcess()
     {
         if (textureArray == null || textureArray.Count == 0) return;
 
-        SetTextureOfIndex();
-        indexOfTexture++;
-
-        if (animationMode == AnimationMode.SINGLE_PHASE)
+        if (useDynamicFramerate && dynamicLoopDuration > 0f)
         {
-            if (indexOfTexture >= textureArray.Count)
+            float elapsedTime = Time.time - animStartTime;
+            int totalFrames = textureArray.Count;
+            if (animationMode == AnimationMode.TWO_PHASE)
             {
-                indexOfTexture = 0;
-                currentLoopCount++;
-                onLoopComplete?.Invoke(currentLoopCount);
-                
-                if (doLoopAnimation)
+                totalFrames = (currentPhase == 1) ? phase2StartIndex : (textureArray.Count - phase2StartIndex);
+            }
+
+            if (totalFrames > 0)
+            {
+                int completedLoops = Mathf.FloorToInt(elapsedTime / dynamicLoopDuration);
+                if (completedLoops > currentLoopCount)
                 {
-                    Invoke(nameof(AnimationProcess), delayBetweenAnimation + delayBetweenLoop);
+                    currentLoopCount = completedLoops;
+                    onLoopComplete?.Invoke(currentLoopCount);
+                    if (!doLoopAnimation)
+                    {
+                        indexOfTexture = totalFrames - 1;
+                        SetTextureOfIndex();
+                        currentAnimationState = ImageState.NONE;
+                        return;
+                    }
                 }
-                else
-                {
-                    currentAnimationState = ImageState.NONE;
-                }
+
+                float loopProgress = (elapsedTime % dynamicLoopDuration) / dynamicLoopDuration;
+                int frameOffset = (animationMode == AnimationMode.TWO_PHASE && currentPhase == 2) ? phase2StartIndex : 0;
+                indexOfTexture = frameOffset + Mathf.Clamp(Mathf.FloorToInt(loopProgress * totalFrames), 0, totalFrames - 1);
             }
             else
             {
-                Invoke(nameof(AnimationProcess), delayBetweenAnimation);
+                indexOfTexture++;
+            }
+        }
+        else
+        {
+            indexOfTexture++;
+        }
+
+        if (animationMode == AnimationMode.SINGLE_PHASE)
+        {
+            if (!useDynamicFramerate)
+            {
+                if (indexOfTexture >= textureArray.Count)
+                {
+                    indexOfTexture = 0;
+                    currentLoopCount++;
+                    onLoopComplete?.Invoke(currentLoopCount);
+
+                    if (!doLoopAnimation)
+                    {
+                        currentAnimationState = ImageState.NONE;
+                        return;
+                    }
+                }
             }
         }
         else // TWO_PHASE mode
         {
             HandleTwoPhaseAnimation();
+            if (currentAnimationState == ImageState.NONE) return;
         }
+
+        SetTextureOfIndex();
+        ScheduleNextFrame();
     }
 
     private void HandleTwoPhaseAnimation()
@@ -151,13 +269,13 @@ public class ImageAnimation : MonoBehaviour
                 {
                     // Continue looping Phase 1
                     indexOfTexture = 0;
-                    Invoke(nameof(AnimationProcess), delayBetweenAnimation + delayBetweenLoop);
                 }
                 else
                 {
                     // Move to Phase 2
                     currentPhase = 2;
                     indexOfTexture = phase2StartIndex;
+                    CalculateFrameDelay();
                     
                     // Skip Phase 2 if loop count is 0
                     if (phase2LoopCount == 0)
@@ -165,13 +283,7 @@ public class ImageAnimation : MonoBehaviour
                         currentAnimationState = ImageState.NONE;
                         return;
                     }
-                    
-                    Invoke(nameof(AnimationProcess), delayBetweenAnimation + delayBetweenLoop);
                 }
-            }
-            else
-            {
-                Invoke(nameof(AnimationProcess), delayBetweenAnimation);
             }
         }
         // Phase 2 logic
@@ -187,17 +299,12 @@ public class ImageAnimation : MonoBehaviour
                 {
                     // Continue looping Phase 2
                     indexOfTexture = phase2StartIndex;
-                    Invoke(nameof(AnimationProcess), delayBetweenAnimation + delayBetweenLoop);
                 }
                 else
                 {
                     // Animation complete
                     currentAnimationState = ImageState.NONE;
                 }
-            }
-            else
-            {
-                Invoke(nameof(AnimationProcess), delayBetweenAnimation);
             }
         }
     }
@@ -212,6 +319,7 @@ public class ImageAnimation : MonoBehaviour
         CancelInvoke(nameof(AnimationProcess));
         indexOfTexture = 0;
         currentLoopCount = 0;
+        animStartTime = Time.time;
 
         // Reset two-phase tracking
         currentPhase = 1;
@@ -222,16 +330,6 @@ public class ImageAnimation : MonoBehaviour
 
         RevertToInitialState();
 
-        if (useDynamicFramerate && textureArray != null && textureArray.Count > 0)
-        {
-            delayBetweenAnimation = dynamicLoopDuration / textureArray.Count;
-        }
-        else
-        {
-            delayBetweenAnimation = idealFrameRate * (float)textureArray.Count / AnimationSpeed;
-            if (delayBetweenAnimation <= 0) delayBetweenAnimation = 0.05f;
-        }
-
         // Skip Phase 1 if in TWO_PHASE mode and loop count is 0
         if (animationMode == AnimationMode.TWO_PHASE && phase1LoopCount == 0)
         {
@@ -239,7 +337,8 @@ public class ImageAnimation : MonoBehaviour
             indexOfTexture = phase2StartIndex;
         }
 
-        Invoke(nameof(AnimationProcess), delayBetweenAnimation);
+        CalculateFrameDelay();
+        ScheduleNextFrame();
     }
 
     public void PlayAnimation()
@@ -257,16 +356,18 @@ public class ImageAnimation : MonoBehaviour
         if (currentAnimationState == ImageState.PLAYING)
         {
             CancelInvoke(nameof(AnimationProcess));
+            pauseStartTime = Time.time;
             currentAnimationState = ImageState.PAUSED;
         }
     }
 
     public void ResumeAnimation()
     {
-        if (currentAnimationState == ImageState.PAUSED && !IsInvoking(nameof(AnimationProcess)))
+        if (currentAnimationState == ImageState.PAUSED)
         {
-            Invoke(nameof(AnimationProcess), delayBetweenAnimation);
+            animStartTime += (Time.time - pauseStartTime);
             currentAnimationState = ImageState.PLAYING;
+            ScheduleNextFrame();
         }
     }
 

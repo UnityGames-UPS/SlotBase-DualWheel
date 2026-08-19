@@ -374,8 +374,8 @@ public class SlotView : MonoBehaviour
 
     private void BuildSymbolSpriteArray()
     {
-        // Build the symbol sprite array from named sprite fields (size 14 for IDs 0..13)
-        symbolSprites = new Sprite[14];
+        // Build the symbol sprite array from named sprite fields (size 15 for IDs 0..14)
+        symbolSprites = new Sprite[15];
         symbolSprites[1] = spriteRed3X;        // ID 1: Red3X (Wild)
         symbolSprites[2] = spriteBlue2X;       // ID 2: Blue2X (Wild)
         symbolSprites[3] = spriteBlue7;        // ID 3: Blue7
@@ -389,6 +389,7 @@ public class SlotView : MonoBehaviour
         symbolSprites[11] = spriteGreenWheel;  // ID 11: Green Wheel (Wheel)
         symbolSprites[12] = spriteDoubleWheel; // ID 12: Double Wheel (Wheel)
         symbolSprites[13] = spriteRedWheel;    // ID 13: Red Wheel (Wheel)
+        symbolSprites[14] = spriteRedWheel;    // ID 14: Red Wheel (Wheel)
 
         // Fallback for unassigned sprites
         Sprite defaultSprite = null;
@@ -408,7 +409,7 @@ public class SlotView : MonoBehaviour
                 symbolSprites[i] = defaultSprite;
             }
         }
-        animationSpriteArrays = new List<Sprite>[14];
+        animationSpriteArrays = new List<Sprite>[15];
         animationSpriteArrays[1] = animSpritesRed3X;
         animationSpriteArrays[2] = animSpritesBlue2X;
         animationSpriteArrays[3] = animSpritesBlue7;
@@ -422,6 +423,7 @@ public class SlotView : MonoBehaviour
         animationSpriteArrays[11] = animSpritesGreenWheel;
         animationSpriteArrays[12] = animSpritesDoubleWheel;
         animationSpriteArrays[13] = animSpritesRedWheel;
+        animationSpriteArrays[14] = animSpritesRedWheel;
     }
 
     private void InitializeReels()
@@ -511,7 +513,7 @@ public class SlotView : MonoBehaviour
         bool isCase1 = visibleSymbolIds != null && visibleSymbolIds.Count >= 3 && visibleSymbolIds[1] != 0;
 
         // Build list of non-blank symbol IDs for random buffer images
-        List<int> nonBlankIds = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14 };
+        List<int> nonBlankIds = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 
         // Exclude current visible non-blank result symbols from buffer pool to prevent nearby duplicates
         if (visibleSymbolIds != null)
@@ -622,7 +624,6 @@ public class SlotView : MonoBehaviour
                 reelSettleCurveTweens[i].Kill();
                 reelSettleCurveTweens[i] = null;
             }
-            reelCurveIntensity[i] = 1f;
         }
 
         DisableAllOverlays();
@@ -674,6 +675,16 @@ public class SlotView : MonoBehaviour
     {
         if (columnIndex >= reelTransforms.Length) return;
         if (!isSpinning) return;
+
+        if (columnIndex < reelCurveIntensity.Length)
+        {
+            if (reelSettleCurveTweens[columnIndex] != null)
+            {
+                reelSettleCurveTweens[columnIndex].Kill();
+                reelSettleCurveTweens[columnIndex] = null;
+            }
+            reelCurveIntensity[columnIndex] = 1f;
+        }
 
         Transform slotTransform = reelTransforms[columnIndex];
         var reel = (columnIndex < reelImagesList.Count) ? reelImagesList[columnIndex] : null;
@@ -1004,12 +1015,15 @@ public class SlotView : MonoBehaviour
                             imageAnim.delayBetweenLoop = 0f;
 
                             animGO.SetActive(true);
-                            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : animGO.GetComponent<Image>();
+                            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : imageAnim.GetComponent<Image>();
+                            if (animRenderer == null && animGO != null) animRenderer = animGO.GetComponentInChildren<Image>();
                             if (animRenderer != null)
                             {
                                 animRenderer.DOKill();
                                 Color c = animRenderer.color;
                                 animRenderer.color = new Color(c.r, c.g, c.b, 1f);
+                                animRenderer.enabled = true;
+                                animRenderer.gameObject.SetActive(true);
                             }
                             if (symbolImage != null)
                             {
@@ -1085,6 +1099,7 @@ public class SlotView : MonoBehaviour
 
         int symbolId = currentDisplayMatrix[column][row];
         if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) return;
+        if (symbolId >= 10 && symbolId <= 13) return;
 
         List<Sprite> animSprites = animationSpriteArrays[symbolId];
         if (animSprites == null || animSprites.Count == 0) return;
@@ -1230,6 +1245,7 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
+            if (symbolId >= 10 && symbolId <= 13) continue;
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;
@@ -1242,12 +1258,15 @@ public class SlotView : MonoBehaviour
             imageAnim.delayBetweenLoop = 0f;
 
             animGO.SetActive(true);
-            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : animGO.GetComponent<Image>();
+            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : imageAnim.GetComponent<Image>();
+            if (animRenderer == null && animGO != null) animRenderer = animGO.GetComponentInChildren<Image>();
             if (animRenderer != null)
             {
                 animRenderer.DOKill();
                 Color c = animRenderer.color;
                 animRenderer.color = new Color(c.r, c.g, c.b, 1f);
+                animRenderer.enabled = true;
+                animRenderer.gameObject.SetActive(true);
             }
 
             if (symbolImage != null)
@@ -1340,6 +1359,7 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
+            if (symbolId >= 10 && symbolId <= 13) continue;
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;
@@ -1354,12 +1374,15 @@ public class SlotView : MonoBehaviour
 
             animGO.SetActive(true);
 
-            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : animGO.GetComponentInChildren<Image>();
+            Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : imageAnim.GetComponent<Image>();
+            if (animRenderer == null && animGO != null) animRenderer = animGO.GetComponentInChildren<Image>();
             if (animRenderer != null)
             {
                 animRenderer.DOKill();
                 Color c = animRenderer.color;
                 animRenderer.color = new Color(c.r, c.g, c.b, 1f);
+                animRenderer.enabled = true;
+                animRenderer.gameObject.SetActive(true);
             }
 
             if (symbolImage != null)
@@ -1568,15 +1591,17 @@ public class SlotView : MonoBehaviour
                     {
                         if (animGO != null)
                         {
-                            ImageAnimation imageAnim = animGO.GetComponent<ImageAnimation>();
+                            ImageAnimation imageAnim = animGO.GetComponentInChildren<ImageAnimation>();
                             if (imageAnim != null)
                             {
                                 imageAnim.onLoopComplete = null;
-                                if (imageAnim.rendererDelegate != null)
+                                Image animRenderer = imageAnim.rendererDelegate != null ? imageAnim.rendererDelegate : imageAnim.GetComponent<Image>();
+                                if (animRenderer == null) animRenderer = animGO.GetComponentInChildren<Image>();
+                                if (animRenderer != null)
                                 {
-                                    imageAnim.rendererDelegate.DOKill();
-                                    Color ac = imageAnim.rendererDelegate.color;
-                                    imageAnim.rendererDelegate.color = new Color(ac.r, ac.g, ac.b, 1f);
+                                    animRenderer.DOKill();
+                                    Color ac = animRenderer.color;
+                                    animRenderer.color = new Color(ac.r, ac.g, ac.b, 1f);
                                 }
                                 imageAnim.StopAnimation();
                             }
