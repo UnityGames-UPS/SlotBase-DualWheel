@@ -1215,6 +1215,26 @@ public class SlotView : MonoBehaviour
         int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         int rowLimit = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.rowCount : 3;
 
+        // Check if this winning line contains Red 3X (ID 1) or Blue 2X (ID 2)
+        bool hasWild3X2X = false;
+        if (currentDisplayMatrix != null)
+        {
+            foreach (int flatIndex in flatPositions)
+            {
+                int r = flatIndex / reelCount;
+                int c = flatIndex % reelCount;
+                if (c >= 0 && c < currentDisplayMatrix.Count && r >= 0 && r < currentDisplayMatrix[c].Count)
+                {
+                    int symId = currentDisplayMatrix[c][r];
+                    if (symId == 1 || symId == 2)
+                    {
+                        hasWild3X2X = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         List<ImageAnimation> activeAnims = new List<ImageAnimation>();
         int completedCount = 0;
         bool isCompleted = false;
@@ -1245,7 +1265,16 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
-            if (symbolId >= 10 && symbolId <= 13) continue;
+
+            // If win line contains Red 3X (1) or Blue 2X (2), animate ONLY Red 3X / Blue 2X; otherwise animate all normal symbols except wheels
+            if (hasWild3X2X)
+            {
+                if (symbolId != 1 && symbolId != 2) continue;
+            }
+            else
+            {
+                if (symbolId >= 10 && symbolId <= 13) continue;
+            }
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;
@@ -1319,6 +1348,10 @@ public class SlotView : MonoBehaviour
         {
             yield return new WaitUntil(() => isCompleted);
         }
+        else
+        {
+            yield return new WaitForSeconds(winSymbolLoopDuration);
+        }
     }
 
     private void StartContinuousWinAnimation(IEnumerable<int> flatPositions)
@@ -1327,6 +1360,26 @@ public class SlotView : MonoBehaviour
 
         int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         int rowLimit = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.rowCount : 3;
+
+        // Check if this winning line contains Red 3X (ID 1) or Blue 2X (ID 2)
+        bool hasWild3X2X = false;
+        if (currentDisplayMatrix != null)
+        {
+            foreach (int flatIndex in flatPositions)
+            {
+                int r = flatIndex / reelCount;
+                int c = flatIndex % reelCount;
+                if (c >= 0 && c < currentDisplayMatrix.Count && r >= 0 && r < currentDisplayMatrix[c].Count)
+                {
+                    int symId = currentDisplayMatrix[c][r];
+                    if (symId == 1 || symId == 2)
+                    {
+                        hasWild3X2X = true;
+                        break;
+                    }
+                }
+            }
+        }
 
         if (winAnimationParent && !winAnimationParent.activeSelf)
         {
@@ -1359,7 +1412,16 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
-            if (symbolId >= 10 && symbolId <= 13) continue;
+
+            // If win line contains Red 3X (1) or Blue 2X (2), animate ONLY Red 3X / Blue 2X; otherwise animate all normal symbols except wheels
+            if (hasWild3X2X)
+            {
+                if (symbolId != 1 && symbolId != 2) continue;
+            }
+            else
+            {
+                if (symbolId >= 10 && symbolId <= 13) continue;
+            }
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;

@@ -3458,7 +3458,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
@@ -3682,7 +3682,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
@@ -5747,7 +5747,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 798346097332964457, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 7847.529
+      value: 8302.528
       objectReference: {fileID: 0}
     - target: {fileID: 1543615552854829770, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_Pivot.x
@@ -5855,7 +5855,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3229595239806921705, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -7797.529
+      value: -8252.528
       objectReference: {fileID: 0}
     - target: {fileID: 3302800646347386970, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5883,7 +5883,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3586005779449259553, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0.86237705
+      value: 0.8699191
       objectReference: {fileID: 0}
     - target: {fileID: 3687140520847960057, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5899,7 +5899,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3687140520847960057, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -4615.029
+      value: -4842.529
       objectReference: {fileID: 0}
     - target: {fileID: 7894369414118431487, guid: a604f108c4e6e41ce922c1f385cc3bee, type: 3}
       propertyPath: m_Name
@@ -16788,7 +16788,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -17303,7 +17303,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -17714,7 +17714,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -27327,7 +27327,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
@@ -31425,7 +31425,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
@@ -34937,7 +34937,7 @@ MonoBehaviour:
   doLoopAnimation: 0
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -35958,7 +35958,7 @@ MonoBehaviour:
   quickStopOvershoot: 20
   quickStopDuration: 0.2
   minSpinCyclesBeforeStop: 3
-  winSymbolLoopDuration: 1.5
+  winSymbolLoopDuration: 1
   phase1TotalWinText: {fileID: 2103801738}
   winAnimationParent: {fileID: 1173043577}
   winAnimationColumns:
@@ -42911,7 +42911,7 @@ MonoBehaviour:
   doLoopAnimation: 0
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -44899,7 +44899,7 @@ MonoBehaviour:
   doLoopAnimation: 0
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -47457,7 +47457,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
@@ -47552,7 +47552,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 25
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
@@ -50788,7 +50788,7 @@ MonoBehaviour:
   doLoopAnimation: 1
   useDynamicFramerate: 0
   dynamicLoopDuration: 1
-  targetFramerate: 30
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 0
   currentAnimationState: 0
