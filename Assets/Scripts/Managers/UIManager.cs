@@ -99,20 +99,9 @@ public class UIManager : MonoBehaviour
     [SerializeField] private float dummyWheelStaggerDelay = 0.15f;
     [SerializeField] private float numbersPanelStaggerDelay = 0.25f;
 
-    [Header("Universal Win Popup")]
-    [SerializeField] private GameObject universalWinPopup;
-    [SerializeField] private RectTransform universalWinPopupRect;
-    [SerializeField] private GameObject uwpCongratulationsTitle;
-    [SerializeField] private GameObject uwpYouWonSubtitle;
-    [SerializeField] private GameObject uwpBigWinTitle;
-    [SerializeField] private TMP_Text uwpWinAmountText;
-    [SerializeField] private TMP_Text uwpFreeSpinCountText;
-    [SerializeField] private GameObject uwpFreeSpinObject;
+    [Header("Take Button")]
     [SerializeField] private Button uwpTakeButton;
-    [Header("Universal Win Popup - Portrait")]
     [SerializeField] private Button uwpTakeButtonPortrait;
-    [Header("Universal Win Popup - Star Particle Burst")]
-    [SerializeField] private StarFountain starFountain;
 
     [Header("Spin Button")]
     [SerializeField] private Button spinButton;
@@ -266,11 +255,7 @@ public class UIManager : MonoBehaviour
     public bool IsSpecialWinActive => isSpecialWinActive;
     public System.Action OnSpecialWinComplete;
 
-    // Universal Win Popup state
-    private System.Action universalWinPopupCallback;
-    private Coroutine uwpAutoCloseCoroutine;
-    private Tween uwpWinTween;
-    [SerializeField] private float uwpAutoCloseDelay = 5f;
+
 
     private void Awake()
     {
@@ -350,11 +335,8 @@ public class UIManager : MonoBehaviour
         SetGameObjectActive(settingsPanel, settingsPanelPortrait, false);
         if (gameRulesPanel) gameRulesPanel.SetActive(false);
         if (guidePanel) guidePanel.SetActive(false);
-        if (uwpWinTween != null) { uwpWinTween.Kill(); uwpWinTween = null; }
-        if (starFountain != null) starFountain.StopStarBurst();
         FindWheelResultPopupReferences();
         if (wheelResultPopup != null) wheelResultPopup.SetActive(false);
-        if (universalWinPopup) universalWinPopup.SetActive(false);
 
         StopWheelBonusEffects();
         var redInit = GetRedWheelController();
@@ -519,9 +501,8 @@ public class UIManager : MonoBehaviour
             greenSetup.CenterSpinButton.onClick.AddListener(() => { AudioManager.Instance?.PlayWheelStart(); OnWheelSpinClicked(); });
         }
 
-        // Take button for universal win popup
-        if (uwpTakeButton) uwpTakeButton.onClick.AddListener(OnUniversalWinTakeButtonClicked);
-        if (uwpTakeButtonPortrait) uwpTakeButtonPortrait.onClick.AddListener(OnUniversalWinTakeButtonClicked);
+        if (uwpTakeButton) uwpTakeButton.onClick.AddListener(() => AudioManager.Instance?.PlayTakeButton());
+        if (uwpTakeButtonPortrait) uwpTakeButtonPortrait.onClick.AddListener(() => AudioManager.Instance?.PlayTakeButton());
 
         // Speed buttons setup (Three-layer Toggle)
         if (normalSpeedButton) normalSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); SetSpeedMode(SpinSpeed.Turbo); });
@@ -683,8 +664,7 @@ public class UIManager : MonoBehaviour
 
     internal void TriggerBigWinPopup(SpinResult result, System.Action onComplete = null)
     {
-        double winAmount = (result != null) ? result.winAmount : 0;
-        ShowUniversalWinPopup(WinPopupType.BigWin, winAmount, 0, onComplete);
+        onComplete?.Invoke();
     }
 
     internal void DisableControlsDuringWinAnimation()
@@ -1966,7 +1946,6 @@ public class UIManager : MonoBehaviour
 
         if (wheelResultPopup == null)
         {
-            ShowUniversalWinPopup(WinPopupType.RegularWin, bonusData.totalWinAmount, 0, null);
             yield break;
         }
 
@@ -2212,7 +2191,8 @@ public class UIManager : MonoBehaviour
 
     private IEnumerator ShowWheelResultPopupRoutine(DualWheelsBonusData bonusData, bool isRed, bool isGreen, bool isBoth, System.Action onTakePressed)
     {
-        // Disable TAKE button interactable while popup opens and animates
+        // Enable TAKE button active & disable interactable while popup opens and animates
+        SetButtonActive(uwpTakeButton, uwpTakeButtonPortrait, true);
         SetButtonInteractable(uwpTakeButton, uwpTakeButtonPortrait, false);
 
         yield return StartCoroutine(OpenWheelResultPopupRoutine(bonusData, isRed, isGreen, isBoth));
@@ -2226,9 +2206,6 @@ public class UIManager : MonoBehaviour
         if (uwpTakeButton != null) uwpTakeButton.onClick.AddListener(clickAction);
         if (uwpTakeButtonPortrait != null) uwpTakeButtonPortrait.onClick.AddListener(clickAction);
 
-        Button bgBtn = wheelResultPopup != null ? wheelResultPopup.GetComponent<Button>() : null;
-        if (bgBtn != null) bgBtn.onClick.AddListener(clickAction);
-
         // Wait strictly for user to press TAKE button (NO AUTO-CLOSE)
         while (!takePressed)
         {
@@ -2237,9 +2214,12 @@ public class UIManager : MonoBehaviour
 
         if (uwpTakeButton != null) uwpTakeButton.onClick.RemoveListener(clickAction);
         if (uwpTakeButtonPortrait != null) uwpTakeButtonPortrait.onClick.RemoveListener(clickAction);
-        if (bgBtn != null) bgBtn.onClick.RemoveListener(clickAction);
 
         yield return StartCoroutine(CloseWheelResultPopupRoutine());
+
+        // Deactivate TAKE button after popup closes
+        SetButtonActive(uwpTakeButton, uwpTakeButtonPortrait, false);
+
         onTakePressed?.Invoke();
     }
 
@@ -2265,216 +2245,6 @@ public class UIManager : MonoBehaviour
                 gTr.DOKill();
                 gTr.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.35f, 2, 0.5f);
             }
-        }
-    }
-
-    #endregion
-
-    #region Universal Win Popup
-
-    internal void ShowUniversalWinPopup(WinPopupType type, double winAmount, int freeSpinCount = 0, System.Action onTakePressed = null)
-    {
-        if (universalWinPopup == null) return;
-
-        AudioManager.Instance?.PlayWinObjectBg();
-        isSpecialWinActive = true;
-        universalWinPopupCallback = onTakePressed;
-
-        if (uwpWinTween != null)
-        {
-            uwpWinTween.Kill();
-            uwpWinTween = null;
-        }
-
-        if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(false);
-        if (uwpYouWonSubtitle) uwpYouWonSubtitle.SetActive(false);
-        if (uwpBigWinTitle) uwpBigWinTitle.SetActive(false);
-        if (uwpWinAmountText) uwpWinAmountText.gameObject.SetActive(false);
-        if (uwpFreeSpinCountText) uwpFreeSpinCountText.gameObject.SetActive(false);
-        if (uwpFreeSpinObject) uwpFreeSpinObject.SetActive(false);
-
-        switch (type)
-        {
-            case WinPopupType.FreeSpinTrigger:
-                if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(true);
-                if (uwpYouWonSubtitle) uwpYouWonSubtitle.SetActive(true);
-                if (uwpFreeSpinCountText)
-                {
-                    uwpFreeSpinCountText.gameObject.SetActive(true);
-                    uwpFreeSpinCountText.text = freeSpinCount.ToString();
-                }
-                if (uwpFreeSpinObject) uwpFreeSpinObject.SetActive(true);
-                break;
-
-            case WinPopupType.RegularWin:
-                if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(true);
-                if (uwpYouWonSubtitle) uwpYouWonSubtitle.SetActive(true);
-                if (uwpWinAmountText)
-                {
-                    uwpWinAmountText.gameObject.SetActive(true);
-                    uwpWinAmountText.text = FormatAmount(winAmount);
-                }
-                break;
-
-            case WinPopupType.BigWin:
-                if (uwpBigWinTitle) uwpBigWinTitle.SetActive(true);
-                if (uwpWinAmountText)
-                {
-                    uwpWinAmountText.gameObject.SetActive(true);
-                    uwpWinAmountText.text = FormatAmount(winAmount);
-                    RectTransform bigWinAmountRect = uwpWinAmountText.GetComponent<RectTransform>();
-                    if (bigWinAmountRect != null)
-                    {
-                        Vector2 pos = bigWinAmountRect.anchoredPosition;
-                        pos.y = 0f;
-                        bigWinAmountRect.anchoredPosition = pos;
-                    }
-                }
-                break;
-
-
-
-            case WinPopupType.FreeSpinComplete:
-                if (uwpCongratulationsTitle) uwpCongratulationsTitle.SetActive(true);
-                if (uwpYouWonSubtitle) uwpYouWonSubtitle.SetActive(true);
-                if (uwpWinAmountText)
-                {
-                    uwpWinAmountText.gameObject.SetActive(true);
-                    uwpWinAmountText.text = FormatAmount(winAmount);
-                }
-                break;
-        }
-
-        if (type != WinPopupType.BigWin && uwpWinAmountText)
-        {
-            RectTransform winAmountRect = uwpWinAmountText.GetComponent<RectTransform>();
-            if (winAmountRect != null)
-            {
-                Vector2 pos = winAmountRect.anchoredPosition;
-                pos.y = -90f;
-                winAmountRect.anchoredPosition = pos;
-            }
-        }
-
-        SetSpinStopButtonStates(isSpinningState: false, isInteractable: false);
-
-        bool showTakeButton = (type != WinPopupType.BigWin);
-        SetButtonActive(uwpTakeButton, uwpTakeButtonPortrait, showTakeButton);
-        SetButtonInteractable(uwpTakeButton, uwpTakeButtonPortrait, showTakeButton);
-
-        universalWinPopup.SetActive(true);
-        if (universalWinPopupRect)
-        {
-            universalWinPopupRect.localScale = Vector3.zero;
-            Sequence openSeq = DOTween.Sequence();
-            openSeq.Append(universalWinPopupRect.DOScale(1.2f, 0.5f).SetEase(Ease.OutCubic));
-            openSeq.Append(universalWinPopupRect.DOScale(1f, 0.3f).SetEase(Ease.InOutSine));
-        }
-
-        if (starFountain != null) starFountain.PlayStarBurst();
-
-        if (uwpWinAmountText != null && uwpWinAmountText.gameObject.activeSelf && winAmount > 0)
-        {
-            int decimals = GetDecimalPlaces(winAmount);
-            string formatStr = decimals > 0 ? "0." + new string('0', decimals) : "0";
-
-            uwpWinAmountText.text = (0.0).ToString(formatStr);
-
-            float countUpDuration = (type == WinPopupType.BigWin) ? 1.5f : 1.0f;
-
-            uwpWinTween = DOVirtual.Float(0f, (float)winAmount, countUpDuration, (val) =>
-            {
-                if (uwpWinAmountText != null)
-                {
-                    uwpWinAmountText.text = val.ToString(formatStr);
-                }
-            }).OnComplete(() =>
-            {
-                if (uwpWinAmountText != null)
-                {
-                    uwpWinAmountText.text = FormatAmount(winAmount);
-                }
-                uwpWinTween = null;
-            });
-        }
-
-        if (uwpAutoCloseCoroutine != null) StopCoroutine(uwpAutoCloseCoroutine);
-        uwpAutoCloseCoroutine = StartCoroutine(AutoCloseUniversalWinPopup());
-    }
-
-    private int GetDecimalPlaces(double amount)
-    {
-        double rounded = System.Math.Round(amount, 4);
-        string str = rounded.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        int dotIndex = str.IndexOf('.');
-        if (dotIndex < 0) return 0;
-        return str.Length - dotIndex - 1;
-    }
-
-    private IEnumerator AutoCloseUniversalWinPopup()
-    {
-        yield return new WaitForSeconds(uwpAutoCloseDelay);
-        uwpAutoCloseCoroutine = null;
-        CloseUniversalWinPopup();
-    }
-
-    private void OnUniversalWinTakeButtonClicked()
-    {
-        AudioManager.Instance?.StopWinObjectBg();
-        AudioManager.Instance?.PlayTakeButton();
-        CloseUniversalWinPopup();
-    }
-
-    private void CloseUniversalWinPopup()
-    {
-        if (universalWinPopup == null || !universalWinPopup.activeSelf) return;
-
-        AudioManager.Instance?.StopWinObjectBg();
-
-        if (uwpWinTween != null)
-        {
-            uwpWinTween.Kill();
-            uwpWinTween = null;
-        }
-
-        if (starFountain != null) starFountain.StopStarBurst();
-
-        if (uwpAutoCloseCoroutine != null)
-        {
-            StopCoroutine(uwpAutoCloseCoroutine);
-            uwpAutoCloseCoroutine = null;
-        }
-
-        System.Action callback = universalWinPopupCallback;
-        universalWinPopupCallback = null;
-
-        SetButtonInteractable(uwpTakeButton, uwpTakeButtonPortrait, false);
-
-        if (universalWinPopupRect)
-        {
-            Sequence closeSeq = DOTween.Sequence();
-            closeSeq.Append(universalWinPopupRect.DOScale(1.1f, 0.1f));
-            closeSeq.Append(universalWinPopupRect.DOScale(0f, 0.2f).SetEase(Ease.InBack));
-            closeSeq.OnComplete(() =>
-            {
-                universalWinPopupRect.localScale = Vector3.one;
-                universalWinPopup.SetActive(false);
-
-                SetButtonActive(uwpTakeButton, uwpTakeButtonPortrait, false);
-                isSpecialWinActive = false;
-                EnableControlsAfterWinAnimation();
-
-                callback?.Invoke();
-            });
-        }
-        else
-        {
-            universalWinPopup.SetActive(false);
-            SetButtonActive(uwpTakeButton, uwpTakeButtonPortrait, false);
-            isSpecialWinActive = false;
-            EnableControlsAfterWinAnimation();
-
-            callback?.Invoke();
         }
     }
 
