@@ -18,9 +18,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Loading & Intro")]
     [SerializeField] private GameObject gameScreen;
-
-
-
+    
     [Header("Bet Controls")]
     [SerializeField] private TMP_Text betAmountText;
     [SerializeField] private Button betPlusButton;
@@ -44,11 +42,9 @@ public class UIManager : MonoBehaviour
     [Header("Bonus Wheels")]
     [SerializeField] private WheelSpinController redWheel;
     [SerializeField] private WheelSpinController greenWheel;
-    [SerializeField] private GameObject wheelScreen;
+    [SerializeField] private Coffee.UIExtensions.ShinyEffectForUGUI redWheelShineEffect;
+    [SerializeField] private Coffee.UIExtensions.ShinyEffectForUGUI greenWheelShineEffect;
     [SerializeField] private Button wheelSpinButton;
-    [SerializeField] private Transform wheelAnticlockwiseRotatingObject;
-    [SerializeField] private float wheelRotationDuration = 8f;
-    private Tween wheelAnticlockwiseRotationTween;
     [Header("Bonus Wheel - Portrait")]
     [SerializeField] private Button wheelSpinButtonPortrait;
 
@@ -59,6 +55,8 @@ public class UIManager : MonoBehaviour
 
     [Header("Bonus Wheel Transition Settings")]
     [SerializeField] private Transform slotObject;
+    [SerializeField] private GameObject wheelLandscapeBackground;
+    [SerializeField] private GameObject wheelPortraitBackground;
 
     [SerializeField] private Transform wheelParent;
     [SerializeField] private Transform redWheelTransform;
@@ -70,14 +68,24 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject dualWheelTitleObject;
     [SerializeField] private float slotBgMoveDuration = 0.5f;
     [SerializeField] private float slotBgTargetY = -1000f;
+    [SerializeField] private float portraitSlotBgTargetY = -1333f;
     [SerializeField] private float wheelMoveDuration = 0.6f;
     [SerializeField] private float phase2MoveDuration = 0.6f;
     [SerializeField] private float redWheelTargetX = -175f;
     [SerializeField] private float greenWheelTargetX = 175f;
     [SerializeField] private Vector3 redWheelFinalPos = new Vector3(-140f, 25f, 0f);
     [SerializeField] private Vector3 greenWheelFinalPos = new Vector3(140f, 65f, 0f);
+    [SerializeField] private Vector3 redWheelPortraitStartPos = new Vector3(-150f, 20f, 0f);
+    [SerializeField] private Vector3 greenWheelPortraitStartPos = new Vector3(150f, 90f, 0f);
+    [SerializeField] private Vector3 redWheelPortraitTargetPos = new Vector3(0f, -170f, 0f);
+    [SerializeField] private Vector3 greenWheelPortraitTargetPos = new Vector3(0f, 170f, 0f);
+    [SerializeField] private Vector3 redWheelLandscapeStartPos = new Vector3(675f, 111f, 0f);
+    [SerializeField] private Vector3 greenWheelLandscapeStartPos = new Vector3(-688f, 111f, 0f);
     [SerializeField] private Vector3 wheelTargetScale = new Vector3(1.23f, 1.23f, 1.23f);
     [SerializeField] private Vector3 wheelPopScale = new Vector3(1.3f, 1.3f, 1.3f);
+
+    [Header("Rainbow Panel Settings")]
+    [SerializeField] private GameObject rainbowPanel;
 
     [Header("Wheel Result Custom Popup")]
     [SerializeField] private GameObject wheelResultPopup;
@@ -104,6 +112,30 @@ public class UIManager : MonoBehaviour
     [Header("Take Button")]
     [SerializeField] private Button uwpTakeButton;
     [SerializeField] private Button uwpTakeButtonPortrait;
+
+    [Header("Win Type Popup")]
+    [SerializeField] private GameObject winTypePopupObject;
+    [SerializeField] private CanvasGroup winTypeCanvasGroup;
+    [SerializeField] private RectTransform winTypePopupRect;
+    [SerializeField] private TMP_Text winTypeWinText;
+    [SerializeField] private GameObject bigWinTitleObject;
+    [SerializeField] private GameObject megaWinTitleObject;
+    [SerializeField] private GameObject legendaryWinTitleObject;
+    [SerializeField] private Button winTypeFullScreenButton;
+    [SerializeField] private StarFountain winTypeStarRain;
+
+    [Header("Win Type Threshold Settings (Multipliers of Bet)")]
+    [SerializeField] private double bigWinThreshold = 5.0;
+    [SerializeField] private double megaWinThreshold = 10.0;
+    [SerializeField] private double legendaryWinThreshold = 20.0;
+
+    [Header("Win Type Timing Settings")]
+    [SerializeField] private float maxCountDuration = 0.4f;
+    [SerializeField] private float autoCloseDelay = 0.5f;
+
+    internal double BigWinThreshold => bigWinThreshold;
+    internal double MegaWinThreshold => megaWinThreshold;
+    internal double LegendaryWinThreshold => legendaryWinThreshold;
 
     [Header("Spin Button")]
     [SerializeField] private Button spinButton;
@@ -249,6 +281,19 @@ public class UIManager : MonoBehaviour
     public bool IsSpecialWinActive => isSpecialWinActive;
     public System.Action OnSpecialWinComplete;
 
+    private bool isWheelBonusActive = false;
+    private Tween redWheelPulseTween;
+    private Tween greenWheelPulseTween;
+
+    private Coroutine winTypeCountCoroutine;
+    private Coroutine winTypeAutoCloseCoroutine;
+    private bool isWinTypeCounting;
+    private double finalWinTypeAmount;
+    private double currentWinTypeCount;
+    private double winTypeTotalBet;
+    private int activeWinTypePhase;
+    private System.Action onWinTypeCompleteCallback;
+
 
 
     private void Awake()
@@ -283,6 +328,7 @@ public class UIManager : MonoBehaviour
         InitializeExpandShrink();
 
         if (gameScreen) gameScreen.SetActive(true);
+        DisableRainbowPanel();
         InitializeUI();
         StartCoroutine(WaitForInitialization());
         RegisterFullscreenListener();
@@ -291,21 +337,68 @@ public class UIManager : MonoBehaviour
     private void OnEnable()
     {
         OrientationChange.OnOrientationChanged += HandleOrientationChangedForWheelButtons;
+        var oc = GetOrientationChange();
+        if (oc != null)
+        {
+            oc.OnOrientationChangedInstance += HandleOrientationChangedForWheelButtons;
+        }
     }
 
     private void OnDisable()
     {
         OrientationChange.OnOrientationChanged -= HandleOrientationChangedForWheelButtons;
+        if (orientationChange != null)
+        {
+            orientationChange.OnOrientationChangedInstance -= HandleOrientationChangedForWheelButtons;
+        }
     }
 
     private void HandleOrientationChangedForWheelButtons(OrientationChange.OrientationMode mode, int width, int height)
     {
         UpdateNewWheelSpinButtonsVisibility();
+        UpdateWheelPositionsForOrientation();
+        if ((wheelLandscapeBackground != null && wheelLandscapeBackground.activeSelf) ||
+            (wheelPortraitBackground != null && wheelPortraitBackground.activeSelf))
+        {
+            EnableWheelBackgroundBasedOnOrientation();
+        }
+    }
+
+    private void UpdateWheelPositionsForOrientation()
+    {
+        if (isWheelBonusActive) return;
+
+        var oc = GetOrientationChange();
+        bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
+
+        Transform redTr = GetRedWheelTransform();
+        Transform greenTr = GetGreenWheelTransform();
+
+        Vector3 redStart = isPortraitMode ? redWheelPortraitStartPos : redWheelLandscapeStartPos;
+        Vector3 greenStart = isPortraitMode ? greenWheelPortraitStartPos : greenWheelLandscapeStartPos;
+
+        if (redTr != null) redTr.localPosition = redStart;
+        if (greenTr != null) greenTr.localPosition = greenStart;
+    }
+
+    private void EnableWheelBackgroundBasedOnOrientation()
+    {
+        var oc = GetOrientationChange();
+        bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
+
+        if (wheelLandscapeBackground != null) wheelLandscapeBackground.SetActive(!isPortraitMode);
+        if (wheelPortraitBackground != null) wheelPortraitBackground.SetActive(isPortraitMode);
+    }
+
+    private void DisableWheelBackgrounds()
+    {
+        if (wheelLandscapeBackground != null) wheelLandscapeBackground.SetActive(false);
+        if (wheelPortraitBackground != null) wheelPortraitBackground.SetActive(false);
     }
 
     private void UpdateNewWheelSpinButtonsVisibility()
     {
-        if (wheelScreen == null || !wheelScreen.activeInHierarchy || wheelSpinTriggered) return;
+        if (!isWheelBonusActive || wheelSpinTriggered) return;
 
         var oc = GetOrientationChange();
         bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
@@ -329,10 +422,10 @@ public class UIManager : MonoBehaviour
         SetGameObjectActive(settingsPanel, settingsPanelPortrait, false);
         if (gameRulesPanel) gameRulesPanel.SetActive(false);
         if (guidePanel) guidePanel.SetActive(false);
+        if (winTypePopupObject != null) winTypePopupObject.SetActive(false);
         FindWheelResultPopupReferences();
         if (wheelResultPopup != null) wheelResultPopup.SetActive(false);
 
-        StopWheelBonusEffects();
         var redInit = GetRedWheelController();
         if (redInit != null) redInit.ResetWheelEffects();
         var greenInit = GetGreenWheelController();
@@ -340,11 +433,13 @@ public class UIManager : MonoBehaviour
         if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
         if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
         if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
+        DisableWheelBackgrounds();
+        isWheelBonusActive = false;
         SetAllWheelSpinButtonsInteractable(false);
         UpdateTopBarVisibility(true);
-        if (wheelScreen) wheelScreen.SetActive(false);
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
         UpdatePingDisplay("-- ms");
+        UpdateWheelPositionsForOrientation();
     }
 
     #region Loading & Intro Sequence
@@ -497,6 +592,12 @@ public class UIManager : MonoBehaviour
 
         if (uwpTakeButton) uwpTakeButton.onClick.AddListener(() => AudioManager.Instance?.PlayTakeButton());
         if (uwpTakeButtonPortrait) uwpTakeButtonPortrait.onClick.AddListener(() => AudioManager.Instance?.PlayTakeButton());
+
+        if (winTypeFullScreenButton != null)
+        {
+            winTypeFullScreenButton.onClick.RemoveAllListeners();
+            winTypeFullScreenButton.onClick.AddListener(OnWinTypeScreenClicked);
+        }
 
         // Speed buttons setup (Three-layer Toggle)
         if (normalSpeedButton) normalSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); SetSpeedMode(SpinSpeed.Turbo); });
@@ -660,9 +761,269 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    internal void TriggerWinTypePopup(double winAmount, double totalBetAmount, System.Action onComplete = null)
+    {
+        double totalBet = totalBetAmount > 0 ? totalBetAmount : (gameManager != null ? gameManager.currentBetAmount : 0.01);
+        double multiplier = winAmount / totalBet;
+
+        Debug.Log($"[UIManager.TriggerWinTypePopup] winAmount: {winAmount}, totalBet: {totalBet}, multiplier: {multiplier}, bigWinThreshold: {bigWinThreshold}, megaWinThreshold: {megaWinThreshold}, legendaryWinThreshold: {legendaryWinThreshold}, winTypePopupObject null? {winTypePopupObject == null}");
+
+        if (winTypePopupObject == null)
+        {
+            Debug.LogError("[UIManager.TriggerWinTypePopup] winTypePopupObject is NULL! Please assign winTypePopupObject in UIManager Inspector.");
+            onComplete?.Invoke();
+            return;
+        }
+
+        if (multiplier < bigWinThreshold)
+        {
+            Debug.Log($"[UIManager.TriggerWinTypePopup] Multiplier {multiplier} < bigWinThreshold {bigWinThreshold}. Skipping popup.");
+            onComplete?.Invoke();
+            return;
+        }
+
+        finalWinTypeAmount = winAmount;
+        winTypeTotalBet = totalBet;
+        onWinTypeCompleteCallback = onComplete;
+        isWinTypeCounting = true;
+        currentWinTypeCount = 0;
+        activeWinTypePhase = 0;
+
+        if (multiplier >= legendaryWinThreshold)
+        {
+            SetWinTitleActive(legendaryWinTitleObject);
+        }
+        else if (multiplier >= megaWinThreshold)
+        {
+            SetWinTitleActive(megaWinTitleObject);
+        }
+        else
+        {
+            SetWinTitleActive(bigWinTitleObject);
+        }
+
+        if (winTypeWinText != null)
+        {
+            winTypeWinText.text = "0.00";
+        }
+
+        isSpecialWinActive = true;
+        DisableControlsDuringWinAnimation();
+
+        winTypePopupObject.SetActive(true);
+
+        CanvasGroup cg = winTypeCanvasGroup != null ? winTypeCanvasGroup : winTypePopupObject.GetComponent<CanvasGroup>();
+        if (cg == null) cg = winTypePopupObject.AddComponent<CanvasGroup>();
+        winTypeCanvasGroup = cg;
+
+        RectTransform rTr = winTypePopupRect != null ? winTypePopupRect : winTypePopupObject.GetComponent<RectTransform>();
+        winTypePopupRect = rTr;
+
+        cg.DOKill();
+        cg.alpha = 0f;
+
+        if (rTr != null)
+        {
+            rTr.DOKill();
+            rTr.localScale = Vector3.zero;
+        }
+
+        Sequence openSeq = DOTween.Sequence();
+        openSeq.Join(cg.DOFade(1f, 0.35f).SetEase(Ease.OutQuad));
+        if (rTr != null)
+        {
+            openSeq.Join(rTr.DOScale(1.2f, 0.45f).SetEase(Ease.OutCubic));
+            openSeq.Append(rTr.DOScale(1.0f, 0.25f).SetEase(Ease.InOutSine));
+        }
+
+        AudioManager.Instance?.PlayPopupOpen();
+        if (winTypeStarRain != null) winTypeStarRain.PlayStarRain();
+        StartWinTypeWheelPulse();
+
+        if (winTypeCountCoroutine != null) StopCoroutine(winTypeCountCoroutine);
+        if (winTypeAutoCloseCoroutine != null) StopCoroutine(winTypeAutoCloseCoroutine);
+
+        winTypeCountCoroutine = StartCoroutine(WinTypeCountSequence());
+    }
+
+    private IEnumerator WinTypeCountSequence()
+    {
+        float elapsed = 0f;
+        float duration = (maxCountDuration > 0 && maxCountDuration <= 0.5f) ? maxCountDuration : 0.4f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            currentWinTypeCount = LerpDouble(0, finalWinTypeAmount, progress);
+
+            if (winTypeWinText != null)
+            {
+                winTypeWinText.text = currentWinTypeCount.ToString("N2");
+            }
+
+            yield return null;
+        }
+
+        CompleteWinTypeCounting();
+        winTypeAutoCloseCoroutine = StartCoroutine(WinTypeAutoCloseSequence());
+    }
+
+    private double LerpDouble(double start, double end, float progress)
+    {
+        return start + (end - start) * progress;
+    }
+
+   
+
+    private void SetWinTitleActive(GameObject activeTitle)
+    {
+        if (bigWinTitleObject != null) bigWinTitleObject.SetActive(bigWinTitleObject == activeTitle);
+        if (megaWinTitleObject != null) megaWinTitleObject.SetActive(megaWinTitleObject == activeTitle);
+        if (legendaryWinTitleObject != null) legendaryWinTitleObject.SetActive(legendaryWinTitleObject == activeTitle);
+    }
+
+    private void CompleteWinTypeCounting()
+    {
+        isWinTypeCounting = false;
+        currentWinTypeCount = finalWinTypeAmount;
+
+        if (winTypeWinText != null)
+        {
+            winTypeWinText.text = finalWinTypeAmount.ToString("N2");
+        }
+    }
+
+    private IEnumerator WinTypeAutoCloseSequence()
+    {
+        yield return new WaitForSeconds(autoCloseDelay);
+        CloseWinTypePopup();
+    }
+
+    public void OnWinTypeScreenClicked()
+    {
+        if (isWinTypeCounting)
+        {
+            if (winTypeCountCoroutine != null) StopCoroutine(winTypeCountCoroutine);
+            CompleteWinTypeCounting();
+
+            if (winTypeAutoCloseCoroutine != null) StopCoroutine(winTypeAutoCloseCoroutine);
+            winTypeAutoCloseCoroutine = StartCoroutine(WinTypeAutoCloseSequence());
+        }
+        else
+        {
+            CloseWinTypePopup();
+        }
+    }
+
+    public void CloseWinTypePopup()
+    {
+        if (winTypeCountCoroutine != null) StopCoroutine(winTypeCountCoroutine);
+        if (winTypeAutoCloseCoroutine != null) StopCoroutine(winTypeAutoCloseCoroutine);
+
+        AudioManager.Instance?.PlayPopupClose();
+        if (winTypeStarRain != null) winTypeStarRain.StopStarRain();
+        StopWinTypeWheelPulse();
+
+        Sequence closeSeq = DOTween.Sequence();
+        if (winTypeCanvasGroup != null)
+        {
+            closeSeq.Join(winTypeCanvasGroup.DOFade(0f, 0.25f).SetEase(Ease.InQuad));
+        }
+
+        if (winTypePopupRect != null)
+        {
+            closeSeq.Join(winTypePopupRect.DOScale(0f, 0.25f).SetEase(Ease.InBack));
+        }
+
+        closeSeq.OnComplete(() =>
+        {
+            if (winTypePopupObject != null)
+            {
+                winTypePopupObject.SetActive(false);
+            }
+
+            isSpecialWinActive = false;
+            EnableControlsAfterWinAnimation();
+
+            System.Action callback = onWinTypeCompleteCallback;
+            onWinTypeCompleteCallback = null;
+            callback?.Invoke();
+        });
+    }
+
+    private void StartWinTypeWheelPulse()
+    {
+        StopWinTypeWheelPulse();
+
+        Transform redTr = GetRedWheelTransform();
+        Transform greenTr = GetGreenWheelTransform();
+
+        float pulseDuration = 0.45f;
+
+        if (redTr != null)
+        {
+            redTr.DOKill();
+            redTr.localScale = Vector3.one * 1.0f;
+            redWheelPulseTween = redTr.DOScale(Vector3.one * 1.2f, pulseDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+        }
+
+        if (greenTr != null)
+        {
+            greenTr.DOKill();
+            greenTr.localScale = Vector3.one * 1.2f;
+            greenWheelPulseTween = greenTr.DOScale(Vector3.one * 1.0f, pulseDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+        }
+    }
+
+    private void StopWinTypeWheelPulse()
+    {
+        if (redWheelPulseTween != null)
+        {
+            redWheelPulseTween.Kill();
+            redWheelPulseTween = null;
+        }
+
+        if (greenWheelPulseTween != null)
+        {
+            greenWheelPulseTween.Kill();
+            greenWheelPulseTween = null;
+        }
+
+        float resetDuration = 0.3f;
+
+        Transform redTr = GetRedWheelTransform();
+        if (redTr != null)
+        {
+            redTr.DOKill();
+            redTr.DOScale(Vector3.one, resetDuration).SetEase(Ease.OutQuad);
+        }
+
+        Transform greenTr = GetGreenWheelTransform();
+        if (greenTr != null)
+        {
+            greenTr.DOKill();
+            greenTr.DOScale(Vector3.one, resetDuration).SetEase(Ease.OutQuad);
+        }
+    }
+
     internal void TriggerBigWinPopup(SpinResult result, System.Action onComplete = null)
     {
-        onComplete?.Invoke();
+        if (result == null)
+        {
+            Debug.LogWarning("[UIManager.TriggerBigWinPopup] SpinResult is NULL");
+            onComplete?.Invoke();
+            return;
+        }
+
+        double bet = gameManager != null ? gameManager.currentBetAmount : 0.01;
+        double win = result.grandTotalWin > 0 ? result.grandTotalWin : result.winAmount;
+        Debug.Log($"[UIManager.TriggerBigWinPopup] Called with win: {win}, bet: {bet}");
+        TriggerWinTypePopup(win, bet, onComplete);
     }
 
     internal void DisableControlsDuringWinAnimation()
@@ -1282,6 +1643,15 @@ public class UIManager : MonoBehaviour
         SetButtonInteractable(betMinusButton, betMinusButtonPortrait, enabled);
     }
 
+    internal void EnableRainbowPanel()
+    {
+        if (rainbowPanel != null) rainbowPanel.SetActive(true);
+    }
+
+    internal void DisableRainbowPanel()
+    {
+        if (rainbowPanel != null) rainbowPanel.SetActive(false);
+    }
     #endregion
 
     #region Dynamic Game Rules Updates
@@ -1583,22 +1953,26 @@ public class UIManager : MonoBehaviour
         if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
         if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
         if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
+        DisableWheelBackgrounds();
 
         // Reset wheel effects initially (normal UI, no disable screen anything)
+        StopWheelShineEffects();
         if (redCtrl != null) redCtrl.ResetWheelEffects();
         if (greenCtrl != null) greenCtrl.ResetWheelEffects();
 
         // Record initial positions & scales
-        Vector3 initialSlotPos = targetSlotBG != null ? targetSlotBG.localPosition : Vector3.zero;
-        Vector3 initialRedPos = redTr != null ? redTr.localPosition : Vector3.zero;
-        Vector3 initialGreenPos = greenTr != null ? greenTr.localPosition : Vector3.zero;
+        var oc = GetOrientationChange();
+        bool isPortraitMode = (oc != null && oc.CurrentMode == OrientationChange.OrientationMode.MobilePortrait);
+
+        Vector3 initialSlotPos = targetSlotBG != null ? targetSlotBG.localPosition : (isPortraitMode ? new Vector3(0f, -368f, 0f) : new Vector3(0f, -16.5f, 0f));
+        Vector3 initialRedPos = redTr != null ? redTr.localPosition : (isPortraitMode ? redWheelPortraitStartPos : redWheelLandscapeStartPos);
+        Vector3 initialGreenPos = greenTr != null ? greenTr.localPosition : (isPortraitMode ? greenWheelPortraitStartPos : greenWheelLandscapeStartPos);
         Vector3 initialRedScale = redTr != null ? redTr.localScale : Vector3.one;
         Vector3 initialGreenScale = greenTr != null ? greenTr.localScale : Vector3.one;
 
         // Open spin wheel screen and turn spin buttons active, but NOT interactable yet
+        isWheelBonusActive = true;
         wheelSpinTriggered = false;
-        if (wheelScreen) wheelScreen.SetActive(true);
-        StartWheelBonusEffects();
 
         SetSpinStopButtonStates(isSpinningState: false, isInteractable: false);
         SetButtonActive(spinButton, spinButtonPortrait, false);
@@ -1607,27 +1981,35 @@ public class UIManager : MonoBehaviour
         SetAllWheelSpinButtonsInteractable(false); // Stay interactable off initially
         UpdateNewWheelSpinButtonsVisibility();
 
-        // 1. Slot BG moves down from current Y to -1000 and top bar is disabled
+        // 1. Slot BG moves down from current Y to target Y (-1333 for Portrait, -1000 for Landscape) and top bar is disabled
         if (slotView != null) slotView.DisableAllOverlays();
 
         UpdateTopBarVisibility(false);
+        DisableRainbowPanel();
         if (targetSlotBG != null)
         {
-            yield return targetSlotBG.DOLocalMoveY(slotBgTargetY, slotBgMoveDuration).SetEase(Ease.InOutCubic).WaitForCompletion();
+            float targetY = isPortraitMode ? portraitSlotBgTargetY : slotBgTargetY;
+            yield return targetSlotBG.DOLocalMoveY(targetY, slotBgMoveDuration).SetEase(Ease.InOutCubic).WaitForCompletion();
         }
 
-        // 2. Both wheels come to mid target position (-175 and 175) with normal UI (no disable screen anything)
+        // Enable wheel background based on orientation right when slot finishes going down (and wheel is about to start moving)
+        EnableWheelBackgroundBasedOnOrientation();
+
+        // Start shine effects when wheels start moving to target
+        StartWheelShineEffects();
+
+        // 2. Both wheels come to mid target position with normal UI (no disable screen anything)
         List<Tween> midMoveTweens = new List<Tween>();
         if (redTr != null)
         {
-            Vector3 midRedPos = new Vector3(redWheelTargetX, initialRedPos.y, initialRedPos.z);
+            Vector3 midRedPos = isPortraitMode ? redWheelPortraitTargetPos : new Vector3(redWheelTargetX, redWheelFinalPos.y, redWheelFinalPos.z);
             midMoveTweens.Add(redTr.DOLocalMove(midRedPos, wheelMoveDuration).SetEase(Ease.OutCubic));
             midMoveTweens.Add(redTr.DOScale(Vector3.one, wheelMoveDuration).SetEase(Ease.OutCubic));
         }
 
         if (greenTr != null)
         {
-            Vector3 midGreenPos = new Vector3(greenWheelTargetX, initialGreenPos.y, initialGreenPos.z);
+            Vector3 midGreenPos = isPortraitMode ? greenWheelPortraitTargetPos : new Vector3(greenWheelTargetX, greenWheelFinalPos.y, greenWheelFinalPos.z);
             midMoveTweens.Add(greenTr.DOLocalMove(midGreenPos, wheelMoveDuration).SetEase(Ease.OutCubic));
             midMoveTweens.Add(greenTr.DOScale(Vector3.one, wheelMoveDuration).SetEase(Ease.OutCubic));
         }
@@ -1637,7 +2019,7 @@ public class UIManager : MonoBehaviour
             yield return midMoveTweens[0].WaitForCompletion();
         }
 
-        // 3. When it reaches mid target position (175 and -175), title object gets enabled, plays 1 loop animation, then disables
+        // 3. When it reaches mid target position, title object gets enabled, plays 1 loop animation, then disables
         GameObject targetTitleObj = null;
         if (isBothTriggered)
         {
@@ -1658,8 +2040,10 @@ public class UIManager : MonoBehaviour
         }
 
         // 4. After title animation finishes (Phase 2):
-        // Update child index / sorting, full disable overlays, final positions (-140, 25, 0 for Red & 140, 65, 0 for Green), and pop scales (1 -> 1.3 -> 1.23)
+        // Update child index / sorting, full disable overlays, final positions, and pop scales
         List<Tween> finalMoveTweens = new List<Tween>();
+        Vector3 targetRedFinal = isPortraitMode ? redWheelPortraitTargetPos : redWheelFinalPos;
+        Vector3 targetGreenFinal = isPortraitMode ? greenWheelPortraitTargetPos : greenWheelFinalPos;
 
         if (isBothTriggered)
         {
@@ -1670,12 +2054,12 @@ public class UIManager : MonoBehaviour
 
             if (redTr != null)
             {
-                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(redTr.DOLocalMove(targetRedFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(AnimateWheelPopScale(redTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
             }
             if (greenTr != null)
             {
-                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(greenTr.DOLocalMove(targetGreenFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(AnimateWheelPopScale(greenTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
             }
         }
@@ -1688,12 +2072,12 @@ public class UIManager : MonoBehaviour
 
             if (redTr != null)
             {
-                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(redTr.DOLocalMove(targetRedFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(AnimateWheelPopScale(redTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
             }
             if (greenTr != null)
             {
-                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(greenTr.DOLocalMove(targetGreenFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(greenTr.DOScale(wheelTargetScale, phase2MoveDuration).SetEase(Ease.OutCubic));
             }
         }
@@ -1706,12 +2090,12 @@ public class UIManager : MonoBehaviour
 
             if (redTr != null)
             {
-                finalMoveTweens.Add(redTr.DOLocalMove(redWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(redTr.DOLocalMove(targetRedFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(redTr.DOScale(wheelTargetScale, phase2MoveDuration).SetEase(Ease.OutCubic));
             }
             if (greenTr != null)
             {
-                finalMoveTweens.Add(greenTr.DOLocalMove(greenWheelFinalPos, phase2MoveDuration).SetEase(Ease.OutCubic));
+                finalMoveTweens.Add(greenTr.DOLocalMove(targetGreenFinal, phase2MoveDuration).SetEase(Ease.OutCubic));
                 finalMoveTweens.Add(AnimateWheelPopScale(greenTr, wheelTargetScale, wheelPopScale, phase2MoveDuration));
             }
         }
@@ -1786,6 +2170,18 @@ public class UIManager : MonoBehaviour
 
         yield return StartCoroutine(ShowWheelResultPopupRoutine(bonusData, isRedTriggered, isGreenTriggered, isBothTriggered, null));
 
+        double totalBetVal = gameManager != null ? gameManager.currentBetAmount : 0.01;
+        double totalWinVal = (gameManager != null && gameManager.lastResult != null && gameManager.lastResult.grandTotalWin > 0)
+            ? gameManager.lastResult.grandTotalWin
+            : (bonusData != null ? bonusData.totalWinAmount : 0);
+
+        if (totalWinVal / totalBetVal >= bigWinThreshold)
+        {
+            bool winTypeDone = false;
+            TriggerWinTypePopup(totalWinVal, totalBetVal, () => winTypeDone = true);
+            yield return new WaitUntil(() => winTypeDone);
+        }
+
             if (gameManager != null && gameManager.playerData != null)
             {
                 double prevBalance = gameManager.playerData.balance;
@@ -1799,38 +2195,46 @@ public class UIManager : MonoBehaviour
                 AnimateBalanceUpdate(gameManager.playerData.balance, prevBalance);
             }
 
-            StopWheelBonusEffects();
+            DisableWheelBackgrounds();
+            StopWheelShineEffects();
             if (redCtrl != null) redCtrl.ResetWheelEffects();
             if (greenCtrl != null) greenCtrl.ResetWheelEffects();
             if (redWheelTitleObject != null) redWheelTitleObject.SetActive(false);
             if (greenWheelTitleObject != null) greenWheelTitleObject.SetActive(false);
             if (dualWheelTitleObject != null) dualWheelTitleObject.SetActive(false);
             UpdateTopBarVisibility(true);
-            if (wheelScreen) wheelScreen.SetActive(false);
 
         // 9. Restore Slot BG position & Wheel positions/scales
         if (slotView != null) slotView.DisableAllOverlays();
 
+        List<Tween> restoreTweens = new List<Tween>();
+
         if (targetSlotBG != null)
         {
             targetSlotBG.DOKill();
-            targetSlotBG.localPosition = initialSlotPos;
+            restoreTweens.Add(targetSlotBG.DOLocalMove(initialSlotPos, slotBgMoveDuration).SetEase(Ease.InOutCubic));
         }
 
         if (redTr != null)
         {
             redTr.DOKill();
-            redTr.localPosition = initialRedPos;
-            redTr.localScale = initialRedScale;
+            restoreTweens.Add(redTr.DOLocalMove(initialRedPos, wheelMoveDuration).SetEase(Ease.OutCubic));
+            restoreTweens.Add(redTr.DOScale(initialRedScale, wheelMoveDuration).SetEase(Ease.OutCubic));
         }
 
         if (greenTr != null)
         {
             greenTr.DOKill();
-            greenTr.localPosition = initialGreenPos;
-            greenTr.localScale = initialGreenScale;
+            restoreTweens.Add(greenTr.DOLocalMove(initialGreenPos, wheelMoveDuration).SetEase(Ease.OutCubic));
+            restoreTweens.Add(greenTr.DOScale(initialGreenScale, wheelMoveDuration).SetEase(Ease.OutCubic));
         }
 
+        if (restoreTweens.Count > 0)
+        {
+            yield return restoreTweens[0].WaitForCompletion();
+        }
+
+        isWheelBonusActive = false;
         SetButtonActive(wheelSpinButton, wheelSpinButtonPortrait, false);
         if (gameManager != null && gameManager.isAutoPlaying)
         {
@@ -1861,7 +2265,7 @@ public class UIManager : MonoBehaviour
 
     private void FindWheelResultPopupReferences()
     {
-        Transform parentTr = wheelParent != null ? wheelParent : (wheelScreen != null ? wheelScreen.transform : null);
+        Transform parentTr = wheelParent;
         if (parentTr == null) return;
 
         if (wheelResultPopup == null)
@@ -2214,6 +2618,9 @@ public class UIManager : MonoBehaviour
             yield return null;
         }
 
+        // Stop shine effect on Take button press and reset location to 0
+        StopWheelShineEffects();
+
         if (uwpTakeButton != null) uwpTakeButton.onClick.RemoveListener(clickAction);
         if (uwpTakeButtonPortrait != null) uwpTakeButtonPortrait.onClick.RemoveListener(clickAction);
 
@@ -2225,35 +2632,21 @@ public class UIManager : MonoBehaviour
         onTakePressed?.Invoke();
     }
 
+    #region Shine Effect Methods
+
+    public void StartWheelShineEffects()
+    {
+        if (redWheelShineEffect != null) redWheelShineEffect.PlayLoop();
+        if (greenWheelShineEffect != null) greenWheelShineEffect.PlayLoop();
+    }
+
+    public void StopWheelShineEffects()
+    {
+        if (redWheelShineEffect != null) redWheelShineEffect.Stop();
+        if (greenWheelShineEffect != null) greenWheelShineEffect.Stop();
+    }
+
     #endregion
-
-    #region Bonus Wheel Effects
-
-    internal void StartWheelBonusEffects()
-    {
-        if (wheelAnticlockwiseRotatingObject != null)
-        {
-            if (wheelAnticlockwiseRotationTween != null)
-            {
-                wheelAnticlockwiseRotationTween.Kill();
-                wheelAnticlockwiseRotationTween = null;
-            }
-
-            wheelAnticlockwiseRotationTween = wheelAnticlockwiseRotatingObject
-                .DORotate(new Vector3(0f, 0f, 360f), wheelRotationDuration, RotateMode.FastBeyond360)
-                .SetEase(Ease.Linear)
-                .SetLoops(-1, LoopType.Incremental);
-        }
-    }
-
-    internal void StopWheelBonusEffects()
-    {
-        if (wheelAnticlockwiseRotationTween != null)
-        {
-            wheelAnticlockwiseRotationTween.Kill();
-            wheelAnticlockwiseRotationTween = null;
-        }
-    }
 
     #endregion
 }

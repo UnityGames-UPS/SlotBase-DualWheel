@@ -20,8 +20,6 @@ public class OCController : MonoBehaviour
     [Header("Background Toggle Settings")]
     [SerializeField] private GameObject landscapeBackground;
     [SerializeField] private GameObject portraitBackground;
-    [SerializeField] private GameObject wheelLandscapeBackground;
-    [SerializeField] private GameObject wheelPortraitBackground;
 
     [Header("Canvas Scaler Resolutions")]
     [SerializeField] private Vector2 landscapeReferenceResolution = new Vector2(1920f, 1080f);
@@ -38,8 +36,10 @@ public class OCController : MonoBehaviour
     [Header("Slot Object Settings")]
     [SerializeField] private Vector3 landscapeSlotScale = Vector3.one;
     [SerializeField] private Vector3 portraitSlotScale = new Vector3(0.73f, 0.73f, 0.73f);
-    [SerializeField] private Vector3 landscapeSlotPosition = Vector3.zero;
-    [SerializeField] private Vector3 portraitSlotPosition = new Vector3(0f, -150f, 0f);
+    [SerializeField] private Vector3 landscapeSlotPosition = new Vector3(0f, -16.5f, 0f);
+    [SerializeField] private Vector3 portraitSlotPosition = new Vector3(0f, -368f, 0f);
+    internal Vector3 PortraitSlotPosition => portraitSlotPosition;
+    internal Vector3 LandscapeSlotPosition => landscapeSlotPosition;
 
     [Header("Logo Object Settings")]
     [SerializeField] private RectTransform logoObject;
@@ -114,15 +114,6 @@ public class OCController : MonoBehaviour
         if (portraitBackground != null)
         {
             portraitBackground.SetActive(isMobilePortrait);
-        }
-
-        if (wheelLandscapeBackground != null)
-        {
-            wheelLandscapeBackground.SetActive(!isMobilePortrait);
-        }
-        if (wheelPortraitBackground != null)
-        {
-            wheelPortraitBackground.SetActive(isMobilePortrait);
         }
 
         if (canvasScaler != null)

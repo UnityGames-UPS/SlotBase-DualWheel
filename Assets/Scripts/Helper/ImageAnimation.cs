@@ -56,6 +56,12 @@ public class ImageAnimation : MonoBehaviour
     [Tooltip("How many times Phase 2 should loop (-1 = infinite, 0 = skip phase 2, 1+ = specific count)")]
     public int phase2LoopCount = -1;
 
+    [Tooltip("If enabled, allows separate animation speeds for Phase 1 and Phase 2. Phase 1 uses AnimationSpeed, while Phase 2 uses phase2AnimationSpeed.")]
+    public bool useCustomSpeed = false;
+
+    [Tooltip("Animation speed for Phase 2 when useCustomSpeed is enabled.")]
+    public float phase2AnimationSpeed = 5f;
+
     private int currentPhase = 1;
     private int phase1CurrentLoop = 0;
     private int phase2CurrentLoop = 0;
@@ -135,7 +141,14 @@ public class ImageAnimation : MonoBehaviour
         else
         {
             // Original default behavior for non-dynamic animations
-            delayBetweenAnimation = idealFrameRate * (float)textureArray.Count / AnimationSpeed;
+            float currentSpeed = AnimationSpeed;
+            if (animationMode == AnimationMode.TWO_PHASE && useCustomSpeed)
+            {
+                currentSpeed = (currentPhase == 2) ? phase2AnimationSpeed : AnimationSpeed;
+            }
+            if (currentSpeed <= 0f) currentSpeed = 0.001f;
+
+            delayBetweenAnimation = idealFrameRate * (float)textureArray.Count / currentSpeed;
             if (delayBetweenAnimation <= 0) delayBetweenAnimation = 0.05f;
         }
     }

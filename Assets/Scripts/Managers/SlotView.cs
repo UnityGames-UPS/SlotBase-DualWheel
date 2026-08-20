@@ -968,6 +968,10 @@ public class SlotView : MonoBehaviour
 
         KillWinTweens();
         AudioManager.Instance?.PlayWinLinePhase1Start();
+        if (gameManager != null && gameManager.uiManager != null)
+        {
+            gameManager.uiManager.EnableRainbowPanel();
+        }
 
         List<ImageAnimation> activeWheelAnims = new List<ImageAnimation>();
         int completedCount = 0;

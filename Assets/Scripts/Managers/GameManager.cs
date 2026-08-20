@@ -18,8 +18,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float turboSpinDuration = 2.0f;
     [SerializeField] private float quickSpinCycleDuration = 0.8f;
 
-    [Header("Win Settings")]
-    [SerializeField] private double bigWinMultiplierThreshold = 500.0;
+    [SerializeField] private double WinThreshold = 5.0;
 
     internal GameConfig gameConfig;
     internal PlayerData playerData;
@@ -46,6 +45,10 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        if (uiManager != null)
+        {
+            WinThreshold = uiManager.BigWinThreshold;
+        }
         currentState = GameState.Initializing;
         currentSpinSpeed = SpinSpeed.Normal;
         isInitialized = false;
@@ -54,6 +57,7 @@ public class GameManager : MonoBehaviour
 
     internal void OnInitDataReceived(GameConfig config, PlayerData player, List<List<int>> initialMatrix)
     {
+      
         gameConfig = config;
         playerData = player;
         currentBetIndex = playerData.currentBetIndex;
@@ -268,25 +272,47 @@ public class GameManager : MonoBehaviour
             };
         }
 
-        if (lastResult != null && lastResult.winAmount > 0 && lastResult.winLines != null && lastResult.winLines.Count > 0)
-        {
-            double totalPay = GetTotalPay();
-            double multiplier = totalPay > 0 ? (lastResult.winAmount / totalPay) : 0;
+        double bet = currentBetAmount > 0 ? currentBetAmount : 0.01;
+        double winVal = lastResult != null ? (lastResult.grandTotalWin > 0 ? lastResult.grandTotalWin : lastResult.winAmount) : 0;
+        double multiplier = bet > 0 ? (winVal / bet) : 0;
 
-            if (multiplier >= bigWinMultiplierThreshold)
+        bool isFeatureTriggered = lastResult != null && lastResult.dualWheelsBonusData != null && lastResult.dualWheelsBonusData.isTriggered;
+
+        Debug.Log($"[GameManager.OnReelsStoppedComplete] winVal: {winVal}, bet: {bet}, multiplier: {multiplier}, WinThreshold: {WinThreshold}, isFeatureTriggered: {isFeatureTriggered}");
+
+        if (lastResult != null && winVal > 0 && !isFeatureTriggered)
+        {
+            if (multiplier >= WinThreshold)
             {
+                Debug.Log($"[GameManager] Win Popup TRIGGERED! Multiplier {multiplier} >= WinThreshold {WinThreshold}");
                 uiManager.DisableControlsDuringWinAnimation();
                 currentState = GameState.Idle;
-                slotView.ShowWinLineAnimation(lastResult.winLines, OnWinAnimationComplete);
-                StartCoroutine(TriggerWinPopupWithDelay(1.5f, lastResult));
+                waitingForSpecialWin = true;
+                StartCoroutine(TriggerWinPopupWithDelay(0.3f, lastResult));
+                if (lastResult.winLines != null && lastResult.winLines.Count > 0 && slotView != null)
+                {
+                    slotView.ShowWinLineAnimation(lastResult.winLines, OnWinAnimationComplete);
+                }
+                else
+                {
+                    OnWinAnimationComplete();
+                }
             }
             else
             {
+                Debug.Log($"[GameManager] Normal Win. Multiplier {multiplier} < WinThreshold {WinThreshold}");
                 uiManager.OnSpinStopping(lastResult);
                 uiManager.EnableControlsAfterWinAnimation();
                 uiManager.OnSpinCompleted(lastResult);
                 currentState = GameState.Idle;
-                slotView.ShowWinLineAnimation(lastResult.winLines, OnWinAnimationComplete);
+                if (lastResult.winLines != null && lastResult.winLines.Count > 0 && slotView != null)
+                {
+                    slotView.ShowWinLineAnimation(lastResult.winLines, OnWinAnimationComplete);
+                }
+                else
+                {
+                    OnWinAnimationComplete();
+                }
             }
         }
         else
@@ -300,39 +326,43 @@ public class GameManager : MonoBehaviour
     private IEnumerator TriggerWinPopupWithDelay(float delay, SpinResult result)
     {
         if (result == null) yield break;
-        double totalPay = GetTotalPay();
-        double multiplier = totalPay > 0 ? (result.winAmount / totalPay) : 0;
-        if (multiplier < bigWinMultiplierThreshold)
+        double bet = currentBetAmount > 0 ? currentBetAmount : 0.01;
+        double winVal = result.grandTotalWin > 0 ? result.grandTotalWin : result.winAmount;
+        double multiplier = bet > 0 ? (winVal / bet) : 0;
+
+        Debug.Log($"[GameManager.TriggerWinPopupWithDelay] winVal: {winVal}, bet: {bet}, multiplier: {multiplier}, WinThreshold: {WinThreshold}");
+
+        if (multiplier < WinThreshold)
         {
+            Debug.Log($"[GameManager.TriggerWinPopupWithDelay] Multiplier {multiplier} < WinThreshold {WinThreshold}, cancelling popup.");
             waitingForSpecialWin = false;
             yield break;
         }
 
         waitingForSpecialWin = true;
 
-        yield return new WaitForSeconds(delay);
+        if (delay > 0)
+        {
+            yield return new WaitForSeconds(delay);
+        }
 
-        if (lastResult == result && multiplier >= bigWinMultiplierThreshold)
+        Debug.Log($"[GameManager.TriggerWinPopupWithDelay] Delay complete. Calling uiManager.TriggerBigWinPopup");
+        uiManager.TriggerBigWinPopup(result, () =>
         {
-            uiManager.TriggerBigWinPopup(result, () =>
-            {
-                waitingForSpecialWin = false;
-            });
-        }
-        else
-        {
+            Debug.Log("[GameManager.TriggerWinPopupWithDelay] BigWinPopup finished callback.");
             waitingForSpecialWin = false;
-        }
+        });
     }
 
     private void OnWinAnimationComplete()
     {
         if (lastResult != null)
         {
-            double totalPay = GetTotalPay();
-            double multiplier = totalPay > 0 ? (lastResult.winAmount / totalPay) : 0;
+            double bet = currentBetAmount > 0 ? currentBetAmount : 0.01;
+            double winVal = lastResult.grandTotalWin > 0 ? lastResult.grandTotalWin : lastResult.winAmount;
+            double multiplier = bet > 0 ? (winVal / bet) : 0;
 
-            if (multiplier >= bigWinMultiplierThreshold)
+            if (multiplier >= WinThreshold)
             {
                 uiManager.OnSpinStopping(lastResult);
             }
@@ -579,7 +609,7 @@ public class GameManager : MonoBehaviour
 
     internal double GetTotalPay()
     {
-        double divisor = (gameConfig != null && gameConfig.creditDivisor > 0) ? gameConfig.creditDivisor : 25;
+        double divisor = (gameConfig != null && gameConfig.paylineCount > 0) ? gameConfig.paylineCount : 25;
         return currentBetAmount * divisor;
     }
 

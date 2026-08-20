@@ -6,17 +6,21 @@ using System.Collections.Generic;
 
 public class StarFountain : MonoBehaviour
 {
-    [Header("Star Fountain Settings")]
+    [Header("Star Rain Settings")]
     [SerializeField] private GameObject starPrefab;
     [SerializeField] private Transform starSpawnContainer;
     [SerializeField] private int starPoolSize = 200;
 
     [Header("Behavior Settings")]
-    [Tooltip("If true, items maintain initial scale and alpha throughout travel (fade variation 0-10% max). Useful for coin fountains.")]
+    [Tooltip("If true, items maintain initial scale and alpha throughout travel (fade variation 0-10% max).")]
     [SerializeField] private bool disableEndFadeAndScale = false;
 
+    [Header("Rain Speed Settings")]
+    [SerializeField] private float minFallDuration = 1.2f;
+    [SerializeField] private float maxFallDuration = 2.2f;
+
     private List<GameObject> starPool = new List<GameObject>();
-    private Coroutine starBurstCoroutine;
+    private Coroutine starRainCoroutine;
 
     private void Start()
     {
@@ -58,27 +62,27 @@ public class StarFountain : MonoBehaviour
         return null;
     }
 
-    internal void PlayStarBurst()
+    internal void PlayStarRain()
     {
-        StopStarBurst();
+        StopStarRain();
         if (starPrefab == null) return;
 
-        int prewarmCount = Random.Range(25, 40);
+        int prewarmCount = Random.Range(10, 25);
         for (int i = 0; i < prewarmCount; i++)
         {
-            float initialProgress = Random.Range(0.10f, 0.85f);
-            PrewarmSingleBurstStar(initialProgress);
+            float initialProgress = Random.Range(0.08f, 1.2f);
+            PrewarmSingleRainStar(initialProgress);
         }
 
-        starBurstCoroutine = StartCoroutine(StarBurstRoutine());
+        starRainCoroutine = StartCoroutine(StarRainRoutine());
     }
 
-    internal void StopStarBurst()
+    internal void StopStarRain()
     {
-        if (starBurstCoroutine != null)
+        if (starRainCoroutine != null)
         {
-            StopCoroutine(starBurstCoroutine);
-            starBurstCoroutine = null;
+            StopCoroutine(starRainCoroutine);
+            starRainCoroutine = null;
         }
 
         for (int i = 0; i < starPool.Count; i++)
@@ -89,8 +93,6 @@ public class StarFountain : MonoBehaviour
             }
         }
     }
-
-
 
     private void RecycleStar(GameObject star)
     {
@@ -117,35 +119,19 @@ public class StarFountain : MonoBehaviour
         else star.transform.localPosition = Vector3.zero;
     }
 
-    private IEnumerator StarBurstRoutine()
+    private IEnumerator StarRainRoutine()
     {
         while (gameObject.activeInHierarchy)
         {
-            int burstCount = Random.Range(2, 4);
-            for (int i = 0; i < burstCount; i++)
-            {
-                SpawnSingleBurstStar();
-            }
-            yield return new WaitForSeconds(Random.Range(0.04f, 0.07f));
+            SpawnSingleRainStar();
+            yield return new WaitForSeconds(Random.Range(0.18f, 0.32f));
         }
     }
 
-    private void PrewarmSingleBurstStar(float progress)
+    private void GetContainerDimensions(out float width, out float height)
     {
-        GameObject star = GetPooledStar();
-        if (star == null) return;
-
-        RecycleStar(star);
-
-        Vector2 startOffset = Random.insideUnitCircle * 25f;
-
-        float randomScale = Random.Range(0.3f, 1.2f);
-        star.transform.localScale = Vector3.one * randomScale;
-
-        float randomRotation = Random.Range(0f, 360f);
-
-        float width = 800f;
-        float height = 600f;
+        width = 800f;
+        height = 600f;
         Transform container = starSpawnContainer != null ? starSpawnContainer : transform;
         RectTransform containerRect = container.GetComponent<RectTransform>();
         if (containerRect != null)
@@ -153,42 +139,48 @@ public class StarFountain : MonoBehaviour
             if (containerRect.rect.width > 0) width = containerRect.rect.width;
             if (containerRect.rect.height > 0) height = containerRect.rect.height;
         }
+    }
 
+    #region Rain Mode (Top to Bottom)
+
+    private void PrewarmSingleRainStar(float progress)
+    {
+        GameObject star = GetPooledStar();
+        if (star == null) return;
+
+        RecycleStar(star);
+
+        GetContainerDimensions(out float width, out float height);
         float hw = width * 0.5f;
         float hh = height * 0.5f;
 
-        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(angle);
-        float sin = Mathf.Sin(angle);
+        float startX = Random.Range(-hw, hw);
+        float startY = hh + 30f;
+        Vector2 startPos = new Vector2(startX, startY);
 
-        float tx = Mathf.Abs(cos) > 0.0001f ? hw / Mathf.Abs(cos) : float.MaxValue;
-        float ty = Mathf.Abs(sin) > 0.0001f ? hh / Mathf.Abs(sin) : float.MaxValue;
-        float distanceToBorder = Mathf.Min(tx, ty);
+        float endX = startX + Random.Range(-60f, 60f);
+        float endY = -hh - 40f;
+        Vector2 targetPos = new Vector2(endX, endY);
 
-        Vector2 targetPos = new Vector2(cos * distanceToBorder, sin * distanceToBorder);
-
-        float totalDuration = Random.Range(1.4f, 2.2f);
+        float totalDuration = Random.Range(minFallDuration, maxFallDuration);
         float remainingDuration = totalDuration * (1f - progress);
 
-        Vector2 currentPos = Vector2.Lerp(startOffset, targetPos, progress);
-        float currentRotation = randomRotation + (Random.Range(-90f, 90f) * progress);
+        Vector2 currentPos = Vector2.Lerp(startPos, targetPos, progress);
+
+        float randomScale = Random.Range(0.4f, 1.1f);
+        star.transform.localScale = Vector3.one * randomScale;
+
+        float currentRotation = Random.Range(0f, 360f);
+        star.transform.localRotation = Quaternion.Euler(0f, 0f, currentRotation);
 
         RectTransform starRect = star.GetComponent<RectTransform>();
-        if (starRect != null)
-        {
-            starRect.anchoredPosition = currentPos;
-        }
-        else
-        {
-            star.transform.localPosition = currentPos;
-        }
-        star.transform.localRotation = Quaternion.Euler(0f, 0f, currentRotation);
+        if (starRect != null) starRect.anchoredPosition = currentPos;
+        else star.transform.localPosition = currentPos;
 
         CanvasGroup cg = star.GetComponent<CanvasGroup>();
         Image img = star.GetComponent<Image>();
 
-        // For coins (disableEndFadeAndScale), alpha variation is 0-10% max (0.9 to 1.0) and stays constant
-        float startAlpha = disableEndFadeAndScale ? Random.Range(0.9f, 1.0f) : (1f - progress);
+        float startAlpha = disableEndFadeAndScale ? Random.Range(0.85f, 1.0f) : Mathf.Clamp01(1.2f - progress);
         if (cg != null) cg.alpha = startAlpha;
         if (img != null)
         {
@@ -201,64 +193,57 @@ public class StarFountain : MonoBehaviour
 
         if (!disableEndFadeAndScale)
         {
-            if (cg != null) cg.DOFade(0f, remainingDuration).SetEase(Ease.Linear);
-            else if (img != null) img.DOFade(0f, remainingDuration).SetEase(Ease.Linear);
+            if (cg != null) cg.DOFade(0f, remainingDuration).SetEase(Ease.InQuad);
+            else if (img != null) img.DOFade(0f, remainingDuration).SetEase(Ease.InQuad);
         }
 
         Sequence starSeq = DOTween.Sequence();
         if (starRect != null)
-        {
             starSeq.Join(starRect.DOAnchorPos(targetPos, remainingDuration).From(currentPos).SetEase(Ease.Linear));
-        }
         else
-        {
             starSeq.Join(star.transform.DOLocalMove(targetPos, remainingDuration).From(currentPos).SetEase(Ease.Linear));
-        }
 
-        float extraRot = Random.Range(-90f, 90f) * (1f - progress);
+        float extraRot = Random.Range(-180f, 180f);
         starSeq.Join(star.transform.DORotate(new Vector3(0, 0, currentRotation + extraRot), remainingDuration, RotateMode.FastBeyond360));
 
-        if (!disableEndFadeAndScale)
-        {
-            starSeq.Join(star.transform.DOScale(randomScale * 0.4f, remainingDuration * 0.4f).SetDelay(remainingDuration * 0.6f));
-        }
-
-        starSeq.OnComplete(() =>
-        {
-            RecycleStar(star);
-        });
+        starSeq.OnComplete(() => RecycleStar(star));
     }
 
-    private void SpawnSingleBurstStar()
+    private void SpawnSingleRainStar()
     {
         GameObject star = GetPooledStar();
         if (star == null) return;
 
         RecycleStar(star);
 
-        Vector2 startOffset = Random.insideUnitCircle * 25f;
-        RectTransform starRect = star.GetComponent<RectTransform>();
-        if (starRect != null)
-        {
-            starRect.anchoredPosition = startOffset;
-        }
-        else
-        {
-            star.transform.localPosition = startOffset;
-        }
+        GetContainerDimensions(out float width, out float height);
+        float hw = width * 0.5f;
+        float hh = height * 0.5f;
 
-        float randomScale = Random.Range(0.3f, 1.2f);
+        float startX = Random.Range(-hw, hw);
+        float startY = hh + 30f;
+        Vector2 startPos = new Vector2(startX, startY);
+
+        float endX = startX + Random.Range(-60f, 60f);
+        float endY = -hh - 40f;
+        Vector2 targetPos = new Vector2(endX, endY);
+
+        float animDuration = Random.Range(minFallDuration, maxFallDuration);
+
+        float randomScale = Random.Range(0.4f, 1.1f);
         star.transform.localScale = Vector3.one * randomScale;
 
         float randomRotation = Random.Range(0f, 360f);
         star.transform.localRotation = Quaternion.Euler(0f, 0f, randomRotation);
 
+        RectTransform starRect = star.GetComponent<RectTransform>();
+        if (starRect != null) starRect.anchoredPosition = startPos;
+        else star.transform.localPosition = startPos;
+
         CanvasGroup cg = star.GetComponent<CanvasGroup>();
         Image img = star.GetComponent<Image>();
 
-        // For coins (disableEndFadeAndScale), alpha variation is 0-10% max (0.9 to 1.0) and stays constant
-        float startAlpha = disableEndFadeAndScale ? Random.Range(0.9f, 1.0f) : 1f;
-
+        float startAlpha = disableEndFadeAndScale ? Random.Range(0.85f, 1.0f) : 1f;
         if (cg != null) cg.alpha = startAlpha;
         if (img != null)
         {
@@ -267,65 +252,30 @@ public class StarFountain : MonoBehaviour
             img.color = c;
         }
 
-        float width = 800f;
-        float height = 600f;
-        Transform container = starSpawnContainer != null ? starSpawnContainer : transform;
-        RectTransform containerRect = container.GetComponent<RectTransform>();
-        if (containerRect != null)
-        {
-            if (containerRect.rect.width > 0) width = containerRect.rect.width;
-            if (containerRect.rect.height > 0) height = containerRect.rect.height;
-        }
-
-        float hw = width * 0.5f;
-        float hh = height * 0.5f;
-
-        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(angle);
-        float sin = Mathf.Sin(angle);
-
-        float tx = Mathf.Abs(cos) > 0.0001f ? hw / Mathf.Abs(cos) : float.MaxValue;
-        float ty = Mathf.Abs(sin) > 0.0001f ? hh / Mathf.Abs(sin) : float.MaxValue;
-        float distanceToBorder = Mathf.Min(tx, ty);
-
-        Vector2 targetPos = new Vector2(cos * distanceToBorder, sin * distanceToBorder);
-
-        float animDuration = Random.Range(1.4f, 2.2f);
-
         star.SetActive(true);
 
         if (!disableEndFadeAndScale)
         {
-            if (cg != null) cg.DOFade(0f, animDuration).SetEase(Ease.Linear);
-            else if (img != null) img.DOFade(0f, animDuration).SetEase(Ease.Linear);
+            if (cg != null) cg.DOFade(0f, animDuration).SetEase(Ease.InQuad);
+            else if (img != null) img.DOFade(0f, animDuration).SetEase(Ease.InQuad);
         }
 
         Sequence starSeq = DOTween.Sequence();
         if (starRect != null)
-        {
-            starSeq.Join(starRect.DOAnchorPos(targetPos, animDuration).From(startOffset).SetEase(Ease.Linear));
-        }
+            starSeq.Join(starRect.DOAnchorPos(targetPos, animDuration).From(startPos).SetEase(Ease.Linear));
         else
-        {
-            starSeq.Join(star.transform.DOLocalMove(targetPos, animDuration).From(startOffset).SetEase(Ease.Linear));
-        }
+            starSeq.Join(star.transform.DOLocalMove(targetPos, animDuration).From(startPos).SetEase(Ease.Linear));
 
-        float extraRot = Random.Range(-90f, 90f);
+        float extraRot = Random.Range(-180f, 180f);
         starSeq.Join(star.transform.DORotate(new Vector3(0, 0, randomRotation + extraRot), animDuration, RotateMode.FastBeyond360));
 
-        if (!disableEndFadeAndScale)
-        {
-            starSeq.Join(star.transform.DOScale(randomScale * 0.4f, animDuration * 0.4f).SetDelay(animDuration * 0.6f));
-        }
-
-        starSeq.OnComplete(() =>
-        {
-            RecycleStar(star);
-        });
+        starSeq.OnComplete(() => RecycleStar(star));
     }
+
+    #endregion
 
     private void OnDisable()
     {
-        StopStarBurst();
+        StopStarRain();
     }
 }

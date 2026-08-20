@@ -36,7 +36,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 150, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4757642387059543735
 CanvasRenderer:
@@ -100,8 +100,17 @@ MonoBehaviour:
   rendererDelegate: {fileID: 5055663082484229935}
   useSharedMaterial: 1
   doLoopAnimation: 1
+  useDynamicFramerate: 0
+  dynamicLoopDuration: 1
+  targetFPS: 24
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
   AnimationSpeed: 5
   delayBetweenLoop: 0
+  animationMode: 0
+  phase2StartIndex: 0
+  phase1LoopCount: 1
+  phase2LoopCount: -1
+  useCustomSpeed: 0
+  phase2AnimationSpeed: 5
