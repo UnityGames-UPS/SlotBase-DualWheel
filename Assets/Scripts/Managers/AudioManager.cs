@@ -26,6 +26,7 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource bgMusicSource;
     [SerializeField] private AudioSource uiSource;
     [SerializeField] private AudioSource reserveSource;
+    [SerializeField] private AudioSource primaryButtonSource;
 
     [Header("Audio Clips")]
     [SerializeField] private AudioClip clipGameMainBg;
@@ -108,8 +109,9 @@ public class AudioManager : MonoBehaviour
     private void ApplySfxVolume()
     {
         float v = _sfxEnabled ? _sfxVolume : 0f;
-        if (uiSource      != null) uiSource.volume      = v;
-        if (reserveSource != null) reserveSource.volume = v;
+        if (uiSource            != null) uiSource.volume            = v;
+        if (reserveSource       != null) reserveSource.volume       = v;
+        if (primaryButtonSource != null) primaryButtonSource.volume = v;
     }
 
     private void PlayUISound(AudioClip clip)
@@ -200,7 +202,18 @@ public class AudioManager : MonoBehaviour
 
     internal void PlayPrimaryActionButton()
     {
-        PlayUISound(clipPrimaryActionButton != null ? clipPrimaryActionButton : clipGeneralButtonClick);
+        if (!_sfxEnabled) return;
+        AudioClip clip = clipPrimaryActionButton != null ? clipPrimaryActionButton : clipGeneralButtonClick;
+        if (clip == null) return;
+
+        if (primaryButtonSource != null)
+        {
+            primaryButtonSource.PlayOneShot(clip);
+        }
+        else
+        {
+            PlayUISound(clip);
+        }
     }
 
     internal void PlaySpinStart()    => PlayPrimaryActionButton();

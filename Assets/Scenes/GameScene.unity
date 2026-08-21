@@ -12640,7 +12640,6 @@ GameObject:
   - component: {fileID: 541279805}
   - component: {fileID: 541279807}
   - component: {fileID: 541279806}
-  - component: {fileID: 541279808}
   m_Layer: 5
   m_Name: TextArea
   m_TagString: Untagged
@@ -12706,18 +12705,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 541279804}
   m_CullTransparentMesh: 1
---- !u!225 &541279808
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 541279804}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 1
 --- !u!1 &543482446
 GameObject:
   m_ObjectHideFlags: 0
@@ -16863,7 +16850,7 @@ GameObject:
   - component: {fileID: 723936147}
   - component: {fileID: 723936146}
   m_Layer: 0
-  m_Name: WheelSpin
+  m_Name: Spin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -20005,9 +19992,10 @@ MonoBehaviour:
   uwpTakeButton: {fileID: 1729874833}
   uwpTakeButtonPortrait: {fileID: 877728123}
   winTypePopupObject: {fileID: 1812535007}
-  winTypeCanvasGroup: {fileID: 541279808}
-  winTypePopupRect: {fileID: 541279805}
+  winTypeCanvasGroup: {fileID: 1812535012}
+  winTypePopupRect: {fileID: 1812535008}
   winTypeWinText: {fileID: 1805633095}
+  winTypeWinTextContainer: {fileID: 541279804}
   bigWinTitleObject: {fileID: 1069014789}
   megaWinTitleObject: {fileID: 245985019}
   legendaryWinTitleObject: {fileID: 504833636}
@@ -25966,7 +25954,7 @@ AudioSource:
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -26592,7 +26580,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f521a04de7f494272a617b2719edd271, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SocketIOManager
-  testToken: 6a8dd32d410447f5a803af26ad506998
+  testToken: ca8201df7a9a43f1a1fdad4de2c8a259
   gameManager: {fileID: 1206269883}
   uiManager: {fileID: 885496184}
   popupManager: {fileID: 1363796882}
@@ -27995,9 +27983,10 @@ MonoBehaviour:
   bgMusicSource: {fileID: 1217757985}
   uiSource: {fileID: 72827552}
   reserveSource: {fileID: 126421844}
+  primaryButtonSource: {fileID: 723936146}
   clipGameMainBg: {fileID: 8300000, guid: b32e0882257b04cf3b6ee31383ad4b02, type: 3}
-  clipBetPlusMinus: {fileID: 8300000, guid: 2f2b2ed50e5fe4c05bde643bb826e4c2, type: 3}
-  clipMaxBetReached: {fileID: 8300000, guid: b556940f8a085479cbf7662d579f648c, type: 3}
+  clipBetPlusMinus: {fileID: 8300000, guid: 963b50cc5a7e148c0a32eb72e5473178, type: 3}
+  clipMaxBetReached: {fileID: 8300000, guid: 8cb7fe610bb604eb689ba2167c2eabe6, type: 3}
   clipPrimaryActionButton: {fileID: 8300000, guid: dece2b38e3fac486491e40d70b00577f, type: 3}
   clipGeneralButtonClick: {fileID: 8300000, guid: 50ff95a09cccb499d80af8f5e75f73c2, type: 3}
   clipPopupOpenClose: {fileID: 8300000, guid: c2ed94ff9b16b4493b05db8e783049c7, type: 3}
@@ -28009,10 +27998,10 @@ MonoBehaviour:
   clipTurboButtonClick: {fileID: 8300000, guid: 1545ce2f353594bdd85973934497bbba, type: 3}
   clipTensionBuilder: {fileID: 8300000, guid: 35b556493dbc54e51b268680ac44643f, type: 3}
   clipReelSpinLoop: {fileID: 8300000, guid: 5bcdeb6b38ac841c88386e9358561009, type: 3}
-  clipWheelTriggerWinLine: {fileID: 0}
-  clipFeatureBg: {fileID: 0}
-  clipWheelSpinBg: {fileID: 0}
-  clipWheelStop: {fileID: 0}
+  clipWheelTriggerWinLine: {fileID: 8300000, guid: 5a28c87dd49e942bbbf1c8b79b2f9590, type: 3}
+  clipFeatureBg: {fileID: 8300000, guid: 5def6f465182f4f18a4f12d0bcde6db0, type: 3}
+  clipWheelSpinBg: {fileID: 8300000, guid: 8c784123e77fd4615b5d761869a279b6, type: 3}
+  clipWheelStop: {fileID: 8300000, guid: 6f31f812a967f40ccbdfb744c41d8c7f, type: 3}
 --- !u!4 &1330086577
 Transform:
   m_ObjectHideFlags: 0
@@ -35089,7 +35078,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1732666856
 RectTransform:
   m_ObjectHideFlags: 0
@@ -36358,6 +36347,7 @@ GameObject:
   - component: {fileID: 1812535011}
   - component: {fileID: 1812535010}
   - component: {fileID: 1812535009}
+  - component: {fileID: 1812535012}
   m_Layer: 5
   m_Name: WinPopup
   m_TagString: Untagged
@@ -36471,6 +36461,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1812535007}
   m_CullTransparentMesh: 1
+--- !u!225 &1812535012
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812535007}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1819120979
 GameObject:
   m_ObjectHideFlags: 0

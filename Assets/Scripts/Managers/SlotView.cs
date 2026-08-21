@@ -750,8 +750,7 @@ public class SlotView : MonoBehaviour
 
         AudioManager.Instance?.StopReelSpinLoop();
 
-        bool isWheelTriggered = !isQuickStop && !isTurbo &&
-                               gameManager != null &&
+        bool isWheelTriggered = gameManager != null &&
                                gameManager.lastResult != null &&
                                gameManager.lastResult.dualWheelsBonusData != null &&
                                gameManager.lastResult.dualWheelsBonusData.isTriggered;
@@ -766,21 +765,21 @@ public class SlotView : MonoBehaviour
             {
                 delay += tensionSpinExtraDuration;
             }
-            StartCoroutine(StopSingleReel(col, resultMatrix[col], delay, isQuickStop || isTurbo, isLastReel && isWheelTriggered));
+            StartCoroutine(StopSingleReel(col, resultMatrix[col], delay, isQuickStop || isTurbo, isLastReel && isWheelTriggered, stagger));
         }
 
+        float extraDelay = isWheelTriggered ? tensionSpinExtraDuration : 0f;
         float longestStopTime;
         if (isQuickStop)
         {
-            longestStopTime = ((maxCols - 1) * stagger) + quickStopDuration;
+            longestStopTime = ((maxCols - 1) * stagger) + extraDelay + quickStopDuration;
         }
         else if (isTurbo)
         {
-            longestStopTime = ((maxCols - 1) * stagger) + (stopOvershootDuration * 0.5f) + (stopSettleDuration * 0.5f);
+            longestStopTime = ((maxCols - 1) * stagger) + extraDelay + (stopOvershootDuration * 0.5f) + (stopSettleDuration * 0.5f);
         }
         else
         {
-            float extraDelay = isWheelTriggered ? tensionSpinExtraDuration : 0f;
             longestStopTime = ((maxCols - 1) * stagger) + extraDelay + stopOvershootDuration + stopSettleDuration;
         }
 
@@ -823,11 +822,11 @@ public class SlotView : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    private IEnumerator StopSingleReel(int columnIndex, List<int> targetSymbols, float delay, bool isQuickStop, bool isTensionSpin = false)
+    private IEnumerator StopSingleReel(int columnIndex, List<int> targetSymbols, float delay, bool isQuickStop, bool isTensionSpin = false, float currentStagger = 0.2f)
     {
         if (isTensionSpin)
         {
-            float frameEnableDelay = (columnIndex > 0) ? (columnIndex - 1) * reelStopStagger : 0f;
+            float frameEnableDelay = (columnIndex > 0) ? (columnIndex - 1) * currentStagger : 0f;
             if (delay > frameEnableDelay)
             {
                 if (frameEnableDelay > 0f)

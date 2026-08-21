@@ -236,12 +236,7 @@ public class GameManager : MonoBehaviour
         {
             if (currentSpinSpeed == SpinSpeed.QuickSpin || stopRequested)
             {
-                slotView.QuickStop(lastResult.resultMatrix);
-
-                float quickStopWaitTime = 0.4f;
-                yield return new WaitForSeconds(quickStopWaitTime);
-
-                OnReelsStoppedComplete();
+                slotView.QuickStop(lastResult.resultMatrix, OnReelsStoppedComplete);
             }
             else if (currentSpinSpeed == SpinSpeed.Turbo)
             {
