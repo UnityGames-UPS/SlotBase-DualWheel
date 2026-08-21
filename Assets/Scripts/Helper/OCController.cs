@@ -97,7 +97,6 @@ public class OCController : MonoBehaviour
 
         bool isMobilePortrait = (mode == OrientationChange.OrientationMode.MobilePortrait);
 
-        // 1. Toggle Landscape vs Portrait Panel Objects
         if (landscapePanelObject != null)
         {
             landscapePanelObject.SetActive(!isMobilePortrait);
@@ -215,7 +214,6 @@ public class OCController : MonoBehaviour
             }
         }
 
-        // 8. Update Guide Scroll Object Height (1080 for Landscape, 1920 for Mobile Portrait)
         if (guideScrollObject != null)
         {
             float targetHeight = isMobilePortrait ? 1920f : 1080f;

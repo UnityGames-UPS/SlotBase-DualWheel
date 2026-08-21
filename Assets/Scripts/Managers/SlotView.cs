@@ -24,7 +24,6 @@ public class SlotView : MonoBehaviour
     [SerializeField] private Sprite spriteDoubleWheel;
     [SerializeField] private Sprite spriteRedWheel;
 
-    // Internal array built from named sprites
     private Sprite[] symbolSprites;
 
     [Header("Win Animation Sprite Arrays for All Icons")]
@@ -42,7 +41,6 @@ public class SlotView : MonoBehaviour
     [SerializeField] private List<Sprite> animSpritesDoubleWheel;
     [SerializeField] private List<Sprite> animSpritesRedWheel;
 
-    // Internal array of animation sprite lists
     private List<Sprite>[] animationSpriteArrays;
 
     [Header("Reel Containers")]
@@ -84,6 +82,12 @@ public class SlotView : MonoBehaviour
     [SerializeField] private GameObject winAnimationParent;
     [Tooltip("GameObject references for win animations. Each should have an ImageAnimation component attached.")]
     [SerializeField] private ColumnOverlays[] winAnimationColumns = new ColumnOverlays[5];
+
+    [Header("Tension / Anticipation Settings")]
+    [Tooltip("Frame object to enable on the last slot during tension extra spin when wheel feature is triggered.")]
+    [SerializeField] private GameObject lastSlotTensionFrame;
+    [Tooltip("Extra spin duration in seconds for the last slot during tension spin.")]
+    [SerializeField] private float tensionSpinExtraDuration = 2.0f;
 
 
     [Header("Symbol Info Card")]
@@ -180,6 +184,10 @@ public class SlotView : MonoBehaviour
         if (winAnimationParent) winAnimationParent.SetActive(false);
         HidePhase1TotalWinText();
         if (symbolInfoCard) symbolInfoCard.HideCard();
+        if (lastSlotTensionFrame) lastSlotTensionFrame.SetActive(false);
+        AudioManager.Instance?.StopTensionBuilder();
+        AudioManager.Instance?.StopReelSpinLoop();
+        AudioManager.Instance?.StopWheelTriggerWinLine();
     }
 
     private void SetupSymbolButtons()
@@ -266,8 +274,8 @@ public class SlotView : MonoBehaviour
 
             if (isCase1ReelPos || isCase1Matrix)
             {
-                if (row == 0) customYOffset = -10f;      // 7th image: -10 Y offset
-                else if (row == 2) customYOffset = 10f;  // 9th image: +10 Y offset
+                if (row == 0) customYOffset = -10f;
+                else if (row == 2) customYOffset = 10f;
             }
         }
 
@@ -329,19 +337,16 @@ public class SlotView : MonoBehaviour
 
         if (row == 0)
         {
-            // Case 2 Top icon -> 1st object (rows[0])
             animGO = overlay.rows[0];
             ResetWinBoxPosition(animGO);
         }
         else if (row == 2)
         {
-            // Case 2 Bottom icon -> 2nd object (rows[1] if present, fallback rows[0])
             animGO = overlay.rows.Length > 1 ? overlay.rows[1] : overlay.rows[0];
             ResetWinBoxPosition(animGO);
         }
         else if (row == 1)
         {
-            // Case 1 Middle icon -> 1st object (rows[0]), set y to 6.5f before enabling
             animGO = overlay.rows[0];
             if (animGO != null)
             {
@@ -365,24 +370,22 @@ public class SlotView : MonoBehaviour
 
     private void BuildSymbolSpriteArray()
     {
-        // Build the symbol sprite array from named sprite fields (size 15 for IDs 0..14)
         symbolSprites = new Sprite[15];
-        symbolSprites[1] = spriteRed3X;        // ID 1: Red3X (Wild)
-        symbolSprites[2] = spriteBlue2X;       // ID 2: Blue2X (Wild)
-        symbolSprites[3] = spriteBlue7;        // ID 3: Blue7
-        symbolSprites[4] = spriteWhite7;       // ID 4: White7
-        symbolSprites[5] = spriteWhite7Bar;    // ID 5: White7Bar
-        symbolSprites[6] = spriteRed7;         // ID 6: Red7
-        symbolSprites[7] = spriteTripleBar;    // ID 7: TripleBar
-        symbolSprites[8] = spriteDoubleBar;    // ID 8: DoubleBar
-        symbolSprites[9] = spriteSingleBar;    // ID 9: SingleBar
-        symbolSprites[10] = spriteSpin;        // ID 10: Spin (Wheel)
-        symbolSprites[11] = spriteGreenWheel;  // ID 11: Green Wheel (Wheel)
-        symbolSprites[12] = spriteDoubleWheel; // ID 12: Double Wheel (Wheel)
-        symbolSprites[13] = spriteRedWheel;    // ID 13: Red Wheel (Wheel)
-        symbolSprites[14] = spriteRedWheel;    // ID 14: Red Wheel (Wheel)
+        symbolSprites[1] = spriteRed3X;
+        symbolSprites[2] = spriteBlue2X;
+        symbolSprites[3] = spriteBlue7;
+        symbolSprites[4] = spriteWhite7;
+        symbolSprites[5] = spriteWhite7Bar;
+        symbolSprites[6] = spriteRed7;
+        symbolSprites[7] = spriteTripleBar;
+        symbolSprites[8] = spriteDoubleBar;
+        symbolSprites[9] = spriteSingleBar;
+        symbolSprites[10] = spriteSpin;
+        symbolSprites[11] = spriteGreenWheel;
+        symbolSprites[12] = spriteDoubleWheel;
+        symbolSprites[13] = spriteRedWheel;
+        symbolSprites[14] = spriteRedWheel;
 
-        // Fallback for unassigned sprites
         Sprite defaultSprite = null;
         for (int i = 0; i < symbolSprites.Length; i++)
         {
@@ -484,12 +487,10 @@ public class SlotView : MonoBehaviour
         bool isMiddleIcon = columnSymbols[1] != 0;
         if (isMiddleIcon)
         {
-            // Case 1: blank, icon, blank -> Stop at case1StopY (-160f default)
             return middlePosition + case1StopY;
         }
         else
         {
-            // Case 2: icon, blank, icon -> Stop at case2StopY (0f default)
             return middlePosition + case2StopY;
         }
     }
@@ -503,10 +504,8 @@ public class SlotView : MonoBehaviour
 
         bool isCase1 = visibleSymbolIds != null && visibleSymbolIds.Count >= 3 && visibleSymbolIds[1] != 0;
 
-        // Build list of non-blank symbol IDs for random buffer images
         List<int> nonBlankIds = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 
-        // Exclude current visible non-blank result symbols from buffer pool to prevent nearby duplicates
         if (visibleSymbolIds != null)
         {
             foreach (int sId in visibleSymbolIds)
@@ -515,7 +514,6 @@ public class SlotView : MonoBehaviour
             }
         }
 
-        // Shuffle nonBlankIds for this reel
         for (int i = nonBlankIds.Count - 1; i > 0; i--)
         {
             int randomIndex = Random.Range(0, i + 1);
@@ -529,8 +527,6 @@ public class SlotView : MonoBehaviour
 
         if (isCase1)
         {
-            // Case 1: blank, icon, blank -> Stop at -160f
-            // Visible elements are 7th, 8th, 9th (0-based array indices 6, 7, 8)
             reservedIndices.Add(6);
             reservedIndices.Add(7);
             reservedIndices.Add(8);
@@ -539,25 +535,22 @@ public class SlotView : MonoBehaviour
             int topId = GetRandomNonBlankSymbolId(nonBlankIds);
             int botId = GetRandomNonBlankSymbolId(nonBlankIds);
 
-            SetImageSymbol(reel.images[7], midId); // 8th element (mid icon)
-            SetImageSymbol(reel.images[6], topId); // 7th element (random top)
-            SetImageSymbol(reel.images[8], botId); // 9th element (random bottom)
+            SetImageSymbol(reel.images[7], midId);
+            SetImageSymbol(reel.images[6], topId);
+            SetImageSymbol(reel.images[8], botId);
         }
         else
         {
-            // Case 2: icon, blank, icon -> Stop at 0f
-            // Visible elements are 7th, 8th (0-based array indices 6, 7)
             reservedIndices.Add(6);
             reservedIndices.Add(7);
 
             int topSymbolId = (visibleSymbolIds != null && visibleSymbolIds.Count > 0) ? visibleSymbolIds[0] : 1;
             int botSymbolId = (visibleSymbolIds != null && visibleSymbolIds.Count > 2) ? visibleSymbolIds[2] : 1;
 
-            SetImageSymbol(reel.images[6], topSymbolId); // 7th element (1st row result)
-            SetImageSymbol(reel.images[7], botSymbolId); // 8th element (3rd row result)
+            SetImageSymbol(reel.images[6], topSymbolId);
+            SetImageSymbol(reel.images[7], botSymbolId);
         }
 
-        // Populate all other buffer images (outside reserved indices) with non-blank symbols
         for (int i = 0; i < reel.images.Count; i++)
         {
             if (reservedIndices.Contains(i)) continue;
@@ -579,16 +572,13 @@ public class SlotView : MonoBehaviour
 
     private Sprite GetSymbolSprite(int symbolId)
     {
-        // Validate symbolId range (0-12)
         if (symbolId < 0 || symbolId >= symbolSprites.Length)
         {
-            Debug.LogWarning($"[SlotView] Invalid symbolId {symbolId}, using default sprite 0. Total sprites: {symbolSprites.Length}");
             return symbolSprites[0];
         }
 
         if (symbolSprites[symbolId] == null)
         {
-            Debug.LogError($"[SlotView] Symbol sprite for ID {symbolId} is null!");
             return symbolSprites[0];
         }
 
@@ -618,6 +608,7 @@ public class SlotView : MonoBehaviour
         }
 
         DisableAllOverlays();
+        AudioManager.Instance?.PlayReelSpinLoop();
 
         StartCylindricalEffectCoroutine();
 
@@ -681,12 +672,10 @@ public class SlotView : MonoBehaviour
         var reel = (columnIndex < reelImagesList.Count) ? reelImagesList[columnIndex] : null;
         int totalImages = (reel != null && reel.images != null && reel.images.Count > 0) ? reel.images.Count : 14;
 
-        // Number of buffer images outside the visible 3-row area
         int bufferCount = totalImages - 3;
         float fullDistance = bufferCount * symbolHeight;
         float halfDistance = fullDistance / 2f;
 
-        // Top start position and bottom loop exit position for spinning the full 14-symbol strip (top to bottom)
         float spinTopY = middlePosition + halfDistance;
         float spinBottomY = middlePosition - halfDistance;
 
@@ -695,7 +684,6 @@ public class SlotView : MonoBehaviour
         float currentSpeed = spinSpeed;
         float loopDuration = fullDistance / currentSpeed;
 
-        // Continuous linear translation over full strip distance, looping seamlessly
         Tweener loopTweener = slotTransform.DOLocalMoveY(spinBottomY, loopDuration)
             .SetEase(Ease.Linear)
             .SetLoops(-1, LoopType.Restart)
@@ -760,12 +748,25 @@ public class SlotView : MonoBehaviour
             }
         }
 
+        AudioManager.Instance?.StopReelSpinLoop();
+
+        bool isWheelTriggered = !isQuickStop && !isTurbo &&
+                               gameManager != null &&
+                               gameManager.lastResult != null &&
+                               gameManager.lastResult.dualWheelsBonusData != null &&
+                               gameManager.lastResult.dualWheelsBonusData.isTriggered;
+
         float stagger = isQuickStop ? quickStopStagger : (isTurbo ? (reelStopStagger * 0.5f) : reelStopStagger);
 
         for (int col = 0; col < maxCols; col++)
         {
+            bool isLastReel = (col == maxCols - 1);
             float delay = col * stagger;
-            StartCoroutine(StopSingleReel(col, resultMatrix[col], delay, isQuickStop || isTurbo));
+            if (isLastReel && isWheelTriggered)
+            {
+                delay += tensionSpinExtraDuration;
+            }
+            StartCoroutine(StopSingleReel(col, resultMatrix[col], delay, isQuickStop || isTurbo, isLastReel && isWheelTriggered));
         }
 
         float longestStopTime;
@@ -779,14 +780,20 @@ public class SlotView : MonoBehaviour
         }
         else
         {
-            longestStopTime = ((maxCols - 1) * stagger) + stopOvershootDuration + stopSettleDuration;
+            float extraDelay = isWheelTriggered ? tensionSpinExtraDuration : 0f;
+            longestStopTime = ((maxCols - 1) * stagger) + extraDelay + stopOvershootDuration + stopSettleDuration;
         }
 
         yield return new WaitForSeconds(longestStopTime);
 
+        if (lastSlotTensionFrame != null)
+        {
+            lastSlotTensionFrame.SetActive(false);
+        }
+        AudioManager.Instance?.StopTensionBuilder();
+
         isSpinning = false;
 
-        // Explicitly kill and clear all spin & settle tweens after reel stop sequence completes
         foreach (var tween in spinTweens)
         {
             tween?.Kill();
@@ -816,9 +823,32 @@ public class SlotView : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    private IEnumerator StopSingleReel(int columnIndex, List<int> targetSymbols, float delay, bool isQuickStop)
+    private IEnumerator StopSingleReel(int columnIndex, List<int> targetSymbols, float delay, bool isQuickStop, bool isTensionSpin = false)
     {
-        if (delay > 0)
+        if (isTensionSpin)
+        {
+            float frameEnableDelay = (columnIndex > 0) ? (columnIndex - 1) * reelStopStagger : 0f;
+            if (delay > frameEnableDelay)
+            {
+                if (frameEnableDelay > 0f)
+                {
+                    yield return new WaitForSeconds(frameEnableDelay);
+                }
+                if (lastSlotTensionFrame != null) lastSlotTensionFrame.SetActive(true);
+                AudioManager.Instance?.PlayTensionBuilder();
+                yield return new WaitForSeconds(delay - frameEnableDelay);
+            }
+            else
+            {
+                if (lastSlotTensionFrame != null) lastSlotTensionFrame.SetActive(true);
+                AudioManager.Instance?.PlayTensionBuilder();
+                if (delay > 0)
+                {
+                    yield return new WaitForSeconds(delay);
+                }
+            }
+        }
+        else if (delay > 0)
         {
             yield return new WaitForSeconds(delay);
         }
@@ -833,7 +863,6 @@ public class SlotView : MonoBehaviour
 
         float targetY = GetTargetYForResult(targetSymbols);
 
-        // Set target symbols & non-blank buffer images for active case
         SetReelSymbols(columnIndex, targetSymbols, false);
 
         bool isCase1 = targetSymbols != null && targetSymbols.Count >= 3 && targetSymbols[1] != 0;
@@ -847,7 +876,6 @@ public class SlotView : MonoBehaviour
         }
         else
         {
-            // Case 2: every icon at stop needs scale=1 and x=0
             if (columnIndex < reelCurveIntensity.Length)
             {
                 if (reelSettleCurveTweens[columnIndex] != null) reelSettleCurveTweens[columnIndex].Kill();
@@ -860,7 +888,6 @@ public class SlotView : MonoBehaviour
             StartCylindricalEffectCoroutine();
         }
 
-        // Snap transform to landing start point above targetY for smooth deceleration ease down to targetY
         float landingStartTopY = targetY + (2f * symbolHeight);
         slotTransform.localPosition = new Vector3(
             slotTransform.localPosition.x,
@@ -868,10 +895,8 @@ public class SlotView : MonoBehaviour
             0
         );
 
-        // ── Play reel-stop sound ──────────
         AudioManager.Instance?.PlayReelStop();
 
-        // Detect wild symbols in this column for hit sounds
         if (currentDisplayMatrix != null && columnIndex < currentDisplayMatrix.Count)
         {
             bool hasWild = false;
@@ -882,7 +907,6 @@ public class SlotView : MonoBehaviour
             }
             if (hasWild) AudioManager.Instance?.PlayReelStop();
         }
-        // ──────────────────────────────────────────────────────────────────
 
         if (isQuickStop)
         {
@@ -967,7 +991,7 @@ public class SlotView : MonoBehaviour
         }
 
         KillWinTweens();
-        AudioManager.Instance?.PlayWinLinePhase1Start();
+        AudioManager.Instance?.PlayWheelTriggerWinLine();
         if (gameManager != null && gameManager.uiManager != null)
         {
             gameManager.uiManager.EnableRainbowPanel();
@@ -983,7 +1007,7 @@ public class SlotView : MonoBehaviour
             for (int row = 0; row < currentDisplayMatrix[col].Count; row++)
             {
                 int symId = currentDisplayMatrix[col][row];
-                if (symId >= 10 && symId <= 13) // Wheel Symbol IDs (10..13: Spin, Green, Double, Red Wheel)
+                if (symId >= 10 && symId <= 13)
                 {
                     var animGO = WinBox(winAnimationColumns, col, row);
                     if (animGO != null)
@@ -1091,17 +1115,36 @@ public class SlotView : MonoBehaviour
 
     private IEnumerator PlaySingleWinLineAnimation(List<WinLine> winLines, System.Action onComplete)
     {
-        WinLine winLine = winLines[0];
-        if (winLine == null || winLine.positions == null || winLine.positions.Count == 0)
+        if (winLines == null || winLines.Count == 0)
         {
             onComplete?.Invoke();
             yield break;
         }
 
-        int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
+        HashSet<int> flatPositions = new HashSet<int>();
+        double totalWinAmount = 0;
+        foreach (var line in winLines)
+        {
+            if (line != null)
+            {
+                totalWinAmount += line.winAmount;
+                if (line.positions != null)
+                {
+                    foreach (int pos in line.positions)
+                    {
+                        flatPositions.Add(pos);
+                    }
+                }
+            }
+        }
 
-        // Show win line text with win amount using scene winLineText
-        ShowPhase1TotalWin(winLine.winAmount);
+        if (flatPositions.Count == 0)
+        {
+            onComplete?.Invoke();
+            yield break;
+        }
+
+        ShowPhase1TotalWin(totalWinAmount);
 
         AudioManager.Instance?.PlayWinLinePhase1Start();
 
@@ -1109,15 +1152,13 @@ public class SlotView : MonoBehaviour
 
         if (isAutoPlaying)
         {
-            // Autoplay mode: Only 1 loop of animation
-            yield return StartCoroutine(AnimateWinPositionsSingleLoop(winLine.positions));
+            yield return StartCoroutine(AnimateWinPositionsSingleLoop(flatPositions));
             HidePhase1TotalWinText();
             onComplete?.Invoke();
         }
         else
         {
-            // Normal mode: Enable animation objects, show winline text, and loop continuously
-            StartContinuousWinAnimation(winLine.positions);
+            StartContinuousWinAnimation(flatPositions);
             onComplete?.Invoke();
         }
     }
@@ -1128,26 +1169,6 @@ public class SlotView : MonoBehaviour
 
         int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         int rowLimit = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.rowCount : 3;
-
-        // Check if this winning line contains Red 3X (ID 1) or Blue 2X (ID 2)
-        bool hasWild3X2X = false;
-        if (currentDisplayMatrix != null)
-        {
-            foreach (int flatIndex in flatPositions)
-            {
-                int r = flatIndex / reelCount;
-                int c = flatIndex % reelCount;
-                if (c >= 0 && c < currentDisplayMatrix.Count && r >= 0 && r < currentDisplayMatrix[c].Count)
-                {
-                    int symId = currentDisplayMatrix[c][r];
-                    if (symId == 1 || symId == 2)
-                    {
-                        hasWild3X2X = true;
-                        break;
-                    }
-                }
-            }
-        }
 
         List<ImageAnimation> activeAnims = new List<ImageAnimation>();
         int completedCount = 0;
@@ -1179,16 +1200,6 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
-
-            // If win line contains Red 3X (1) or Blue 2X (2), animate ONLY Red 3X / Blue 2X; otherwise animate all normal symbols except wheels
-            if (hasWild3X2X)
-            {
-                if (symbolId != 1 && symbolId != 2) continue;
-            }
-            else
-            {
-                if (symbolId >= 10 && symbolId <= 13) continue;
-            }
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;
@@ -1275,26 +1286,6 @@ public class SlotView : MonoBehaviour
         int reelCount = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.reelCount : 3;
         int rowLimit = (gameManager != null && gameManager.gameConfig != null) ? gameManager.gameConfig.rowCount : 3;
 
-        // Check if this winning line contains Red 3X (ID 1) or Blue 2X (ID 2)
-        bool hasWild3X2X = false;
-        if (currentDisplayMatrix != null)
-        {
-            foreach (int flatIndex in flatPositions)
-            {
-                int r = flatIndex / reelCount;
-                int c = flatIndex % reelCount;
-                if (c >= 0 && c < currentDisplayMatrix.Count && r >= 0 && r < currentDisplayMatrix[c].Count)
-                {
-                    int symId = currentDisplayMatrix[c][r];
-                    if (symId == 1 || symId == 2)
-                    {
-                        hasWild3X2X = true;
-                        break;
-                    }
-                }
-            }
-        }
-
         if (winAnimationParent && !winAnimationParent.activeSelf)
         {
             winAnimationParent.SetActive(true);
@@ -1326,16 +1317,6 @@ public class SlotView : MonoBehaviour
             if (currentDisplayMatrix == null || col >= currentDisplayMatrix.Count || row >= currentDisplayMatrix[col].Count) continue;
             int symbolId = currentDisplayMatrix[col][row];
             if (symbolId < 0 || symbolId >= animationSpriteArrays.Length) continue;
-
-            // If win line contains Red 3X (1) or Blue 2X (2), animate ONLY Red 3X / Blue 2X; otherwise animate all normal symbols except wheels
-            if (hasWild3X2X)
-            {
-                if (symbolId != 1 && symbolId != 2) continue;
-            }
-            else
-            {
-                if (symbolId >= 10 && symbolId <= 13) continue;
-            }
 
             List<Sprite> animSprites = animationSpriteArrays[symbolId];
             if (animSprites == null || animSprites.Count == 0) continue;
@@ -1419,12 +1400,6 @@ public class SlotView : MonoBehaviour
         HidePhase1TotalWinText();
     }
 
-    /// <summary>
-    /// Converts input string/number into TextMeshPro sprite asset tags based on mapping:
-    /// 0..9 -> <sprite=0>..<sprite=9>
-    /// '='  -> <sprite=10>
-    /// '.'  -> <sprite=11>
-    /// </summary>
     public static string FormatSpriteText(string input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;
@@ -1501,7 +1476,6 @@ public class SlotView : MonoBehaviour
             winAnimationCoroutine = null;
         }
 
-        // Stop all win animations and disable animation GameObjects
         if (winAnimationColumns != null)
         {
             foreach (var col in winAnimationColumns)
@@ -1541,7 +1515,6 @@ public class SlotView : MonoBehaviour
         HideAllWinLineTexts();
         HidePhase1TotalWinText();
 
-        // Restore all symbol image alphas to full opacity and re-enable active state
         foreach (var reel in reelImagesList)
         {
             if (reel.images != null)
@@ -1640,7 +1613,6 @@ public class SlotView : MonoBehaviour
             UpdateCylindricalSpinEffect(force: false);
             yield return null;
         }
-        // Set final resting positions once when spin & settling finish
         UpdateCylindricalSpinEffect(force: true);
         cylindricalEffectCoroutine = null;
     }
@@ -1658,7 +1630,6 @@ public class SlotView : MonoBehaviour
         }
         float effectiveOuterHalfHeight = Mathf.Max(outerHalfHeight, effectiveVisibleHalfHeight * 1.5f);
 
-        // Precalculate reciprocals to replace division with fast multiplication in loop
         float invVisibleHalfHeight = 1f / Mathf.Max(1f, effectiveVisibleHalfHeight);
         float invOuterRange = 1f / Mathf.Max(1f, effectiveOuterHalfHeight - effectiveVisibleHalfHeight);
 
@@ -1672,7 +1643,6 @@ public class SlotView : MonoBehaviour
 
             float intensity = (col < reelCurveIntensity.Length) ? reelCurveIntensity[col] : 1f;
 
-            // Reference center image is 8th element (index 7)
             float centerImageLocalY = (reel.images.Count > 7 && reel.images[7] != null) ? reel.images[7].rectTransform.localPosition.y : -305.5f;
             float slotOffsetFromCase1 = slotTransform.localPosition.y - case1StopY;
 
@@ -1685,7 +1655,6 @@ public class SlotView : MonoBehaviour
                 RectTransform rect = img.rectTransform;
                 if (rect == null) continue;
 
-                // Vertical offset relative to Case 1 center position (Row 1)
                 float yRel = (rect.localPosition.y - centerImageLocalY) + slotOffsetFromCase1;
                 float absY = Mathf.Abs(yRel);
 
@@ -1694,15 +1663,14 @@ public class SlotView : MonoBehaviour
 
                 if (absY <= effectiveVisibleHalfHeight)
                 {
-                    // Inside visible area (0 to effectiveVisibleHalfHeight)
                     float t = absY * invVisibleHalfHeight;
-                    float curveFactor = t * t * intensity; // Multiply by intensity for Case 2 stop settling
+                    float curveFactor = t * t * intensity;
 
-                    if (col == 0) // Left reel: curve outward to +70
+                    if (col == 0)
                     {
                         targetX = Mathf.Lerp(0f, leftReelEdgeX, curveFactor);
                     }
-                    else if (col == 2) // Right reel: curve outward to -70
+                    else if (col == 2)
                     {
                         targetX = Mathf.Lerp(0f, rightReelEdgeX, curveFactor);
                     }
@@ -1711,14 +1679,13 @@ public class SlotView : MonoBehaviour
                 }
                 else
                 {
-                    // Outside visible area (entering diagonally from top / exiting to bottom)
                     float extraT = Mathf.Clamp01((absY - effectiveVisibleHalfHeight) * invOuterRange);
 
-                    if (col == 0) // Left reel
+                    if (col == 0)
                     {
                         targetX = Mathf.Lerp(leftReelEdgeX, leftReelOuterX, extraT) * intensity;
                     }
-                    else if (col == 2) // Right reel
+                    else if (col == 2)
                     {
                         targetX = Mathf.Lerp(rightReelEdgeX, rightReelOuterX, extraT) * intensity;
                     }

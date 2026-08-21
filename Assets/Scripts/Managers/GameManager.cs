@@ -278,13 +278,10 @@ public class GameManager : MonoBehaviour
 
         bool isFeatureTriggered = lastResult != null && lastResult.dualWheelsBonusData != null && lastResult.dualWheelsBonusData.isTriggered;
 
-        Debug.Log($"[GameManager.OnReelsStoppedComplete] winVal: {winVal}, bet: {bet}, multiplier: {multiplier}, WinThreshold: {WinThreshold}, isFeatureTriggered: {isFeatureTriggered}");
-
         if (lastResult != null && winVal > 0 && !isFeatureTriggered)
         {
             if (multiplier >= WinThreshold)
             {
-                Debug.Log($"[GameManager] Win Popup TRIGGERED! Multiplier {multiplier} >= WinThreshold {WinThreshold}");
                 uiManager.DisableControlsDuringWinAnimation();
                 currentState = GameState.Idle;
                 waitingForSpecialWin = true;
@@ -300,7 +297,6 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                Debug.Log($"[GameManager] Normal Win. Multiplier {multiplier} < WinThreshold {WinThreshold}");
                 uiManager.OnSpinStopping(lastResult);
                 uiManager.EnableControlsAfterWinAnimation();
                 uiManager.OnSpinCompleted(lastResult);
@@ -330,11 +326,8 @@ public class GameManager : MonoBehaviour
         double winVal = result.grandTotalWin > 0 ? result.grandTotalWin : result.winAmount;
         double multiplier = bet > 0 ? (winVal / bet) : 0;
 
-        Debug.Log($"[GameManager.TriggerWinPopupWithDelay] winVal: {winVal}, bet: {bet}, multiplier: {multiplier}, WinThreshold: {WinThreshold}");
-
         if (multiplier < WinThreshold)
         {
-            Debug.Log($"[GameManager.TriggerWinPopupWithDelay] Multiplier {multiplier} < WinThreshold {WinThreshold}, cancelling popup.");
             waitingForSpecialWin = false;
             yield break;
         }
@@ -346,10 +339,8 @@ public class GameManager : MonoBehaviour
             yield return new WaitForSeconds(delay);
         }
 
-        Debug.Log($"[GameManager.TriggerWinPopupWithDelay] Delay complete. Calling uiManager.TriggerBigWinPopup");
         uiManager.TriggerBigWinPopup(result, () =>
         {
-            Debug.Log("[GameManager.TriggerWinPopupWithDelay] BigWinPopup finished callback.");
             waitingForSpecialWin = false;
         });
     }
@@ -393,8 +384,6 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator DelayDualWheelsTriggerResult()
     {
-        AudioManager.Instance?.Play3UspinWinLineLoop();
-
         bool animDone = false;
         if (slotView != null)
         {
@@ -411,7 +400,6 @@ public class GameManager : MonoBehaviour
         {
             uiManager.TriggerDualWheelsBonus(lastResult.dualWheelsBonusData, () =>
             {
-                AudioManager.Instance?.Stop3UspinWinLineLoop();
                 if (lastResult != null && lastResult.dualWheelsBonusData != null)
                 {
                     lastResult.dualWheelsBonusData.isTriggered = false;

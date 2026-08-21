@@ -77,6 +77,7 @@ public class WheelSpinController : MonoBehaviour
     public void SetResultShine(bool active)
     {
         if (resultShineObject != null) resultShineObject.SetActive(active);
+        if (active) AudioManager.Instance?.PlayWheelStop();
     }
 
     public void SetCenterSpinButtonInteractable(bool interactable)
@@ -155,7 +156,6 @@ public class WheelSpinController : MonoBehaviour
             localSeg.assignedValue = values[i % values.Count];
         }
 
-        // Re-align and re-format texts based on the new data
         SetupSegmentTexts();
     }
 
@@ -171,7 +171,6 @@ public class WheelSpinController : MonoBehaviour
             var segment = segments[i];
             if (segment.valueText == null) continue;
             
-            // Format text (Credit / Multiplier, e.g. "X10")
             string valStr = "";
             if (segment.assignedValue > 0)
             {
@@ -186,14 +185,13 @@ public class WheelSpinController : MonoBehaviour
             
             segment.valueText.text = valStr;
             
-            // Position & Rotation (Right side of text facing wheel center)
             float angle = startOffsetAngle - (i * angleStep) - alignmentOffset;
             float rad = angle * Mathf.Deg2Rad;
             
             Vector3 localDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0);
             segment.valueText.rectTransform.localPosition = localDir * textRadius;
             
-            float zRot = faceOutward ? angle : (angle + 180f); // angle + 180f aligns right side of text towards center hub
+            float zRot = faceOutward ? angle : (angle + 180f);
             segment.valueText.rectTransform.localRotation = Quaternion.Euler(0, 0, zRot);
         }
     }
@@ -208,15 +206,12 @@ public class WheelSpinController : MonoBehaviour
     {
         isSpinning = true;
         currentTargetIndex = targetIndex;
-        AudioManager.Instance?.PlayWheelStart();
+        AudioManager.Instance?.PlayWheelSpinBg();
         StartBorderAnimation();
 
-        // 1. Calculate the angle for the target segment relative to the wheel's local zero
         float targetSegmentAngle = (targetIndex * segmentAngle) + alignmentOffset;
         float wheelLocalAngle = startOffsetAngle - targetSegmentAngle;
         
-        // 2. Get the direction from the wheel center to the arrow
-        // (arrow - wheel) gives the vector pointing toward the winning spot on the wheel's edge
         Transform parent = wheelRect.parent;
         Vector3 worldWinningDir = (arrowRect.position - wheelRect.position).normalized;
         Vector3 localWinningDir = parent != null ? parent.InverseTransformDirection(worldWinningDir) : worldWinningDir;
@@ -225,45 +220,25 @@ public class WheelSpinController : MonoBehaviour
         
         float arrowAngle = Mathf.Atan2(localWinningDir.y, localWinningDir.x) * Mathf.Rad2Deg;
         
-        // 3. The target local rotation for the wheel
         float finalTargetLocalRotation = arrowAngle - wheelLocalAngle;
 
-        // 5. Calculate total rotation for Tweening
         float currentLocalRotation = wheelRect.localEulerAngles.z;
         
-        // Find the absolute target rotation that is clockwise from current
         float targetAbs = finalTargetLocalRotation;
         while (targetAbs > currentLocalRotation) targetAbs -= 360f;
         
-        // Add extra spins
         float totalRotation = targetAbs - (extraSpins * 360f);
 
-        Debug.Log($"[WheelSpin] Target Index: {targetIndex}, Arrow Angle: {arrowAngle:F1}, Target Local Z: {finalTargetLocalRotation:F1}, Total Rotation: {totalRotation:F1}");
-
-        float lastAngle = wheelRect.localEulerAngles.z;
-        float accumulatedAngleChange = 0f;
-        float anglePerSegment = (segments != null && segments.Count > 0) ? (360f / segments.Count) : 20f;
 
         wheelRect.DORotate(
             new Vector3(0, 0, totalRotation),
             spinDuration,
             RotateMode.FastBeyond360
-        ).SetEase(spinEase).OnUpdate(() =>
-        {
-            float currentAngle = wheelRect.localEulerAngles.z;
-            float delta = Mathf.DeltaAngle(lastAngle, currentAngle);
-            accumulatedAngleChange += Mathf.Abs(delta);
-            if (accumulatedAngleChange >= anglePerSegment)
-            {
-                accumulatedAngleChange %= anglePerSegment;
-                AudioManager.Instance?.PlayWheelSegmentTick();
-            }
-            lastAngle = currentAngle;
-        });
+        ).SetEase(spinEase);
 
         yield return new WaitForSeconds(spinDuration);
+        AudioManager.Instance?.StopWheelSpinBg();
 
-        // Snap to perfect alignment
         wheelRect.localRotation = Quaternion.Euler(0, 0, finalTargetLocalRotation);
 
         isSpinning = false;
@@ -287,11 +262,10 @@ public class WheelSpinController : MonoBehaviour
     {
         if (wheelRect == null) return;
         
-        int count = (segments != null && segments.Count > 0) ? segments.Count : 18; // Default to 18 if list is empty
+        int count = (segments != null && segments.Count > 0) ? segments.Count : 18;
         float angleStep = 360f / count;
         Vector3 center = wheelRect.position;
         
-        // Calculate radius based on RectTransform size and scale
         float radius = (wheelRect.rect.width > 0) ? (wheelRect.rect.width * 0.5f * wheelRect.lossyScale.x) : 100f;
 
         Gizmos.color = selected ? Color.white : new Color(1, 1, 1, 0.2f);
@@ -301,15 +275,13 @@ public class WheelSpinController : MonoBehaviour
         {
             float angle = startOffsetAngle - (i * angleStep) - alignmentOffset;
             float rad = angle * Mathf.Deg2Rad;
-            // Local direction
             Vector3 localDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0);
-            // World direction
             Vector3 worldDir = wheelRect.rotation * localDir;
             
             if (selected)
             {
                 if (currentTargetIndex != -1 && i == currentTargetIndex)
-                    Gizmos.color = Color.magenta; // Winning segment
+                    Gizmos.color = Color.magenta;
                 else
                     Gizmos.color = (i == 0) ? Color.green : Color.red;
 
@@ -329,16 +301,13 @@ public class WheelSpinController : MonoBehaviour
         {
             Gizmos.color = selected ? Color.yellow : new Color(1, 0.92f, 0.016f, 0.3f);
             Vector3 arrowPos = arrowRect.position;
-            // Direction from wheel center to arrow (World Space for Gizmos)
             Vector3 worldWinningDir = (arrowPos - wheelRect.position).normalized;
             Vector3 endPos = wheelRect.position + worldWinningDir * radius;
             
-            // Draw line from center to arrow position on edge
             Gizmos.DrawLine(wheelRect.position, endPos);
             
             if (selected)
             {
-                // Draw arrow head
                 float headSize = radius * 0.05f;
                 Vector3 right = Vector3.Cross(worldWinningDir, Vector3.forward).normalized;
                 Vector3 headLeft = endPos - worldWinningDir * headSize + right * headSize * 0.5f;

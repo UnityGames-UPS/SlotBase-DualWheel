@@ -2,17 +2,11 @@ using UnityEngine;
 
 public class AudioManager : MonoBehaviour
 {
-    internal static AudioManager Instance { get; private set; }
+    internal static AudioManager Instance ;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
 
         _musicEnabled = PlayerPrefs.GetInt(PrefKeyMusic, 1) == 1;
         _sfxEnabled   = PlayerPrefs.GetInt(PrefKeysfx,   1) == 1;
@@ -31,24 +25,27 @@ public class AudioManager : MonoBehaviour
     [Header("Audio Sources")]
     [SerializeField] private AudioSource bgMusicSource;
     [SerializeField] private AudioSource uiSource;
-    [SerializeField] private AudioSource wheelSegmentSource;
     [SerializeField] private AudioSource reserveSource;
 
     [Header("Audio Clips")]
     [SerializeField] private AudioClip clipGameMainBg;
     [SerializeField] private AudioClip clipBetPlusMinus;
     [SerializeField] private AudioClip clipMaxBetReached;
-    [SerializeField] private AudioClip clip3UspinWinLineLoop;
-    [SerializeField] private AudioClip clipWinObjectBg;
     [SerializeField] private AudioClip clipPrimaryActionButton;
     [SerializeField] private AudioClip clipGeneralButtonClick;
     [SerializeField] private AudioClip clipPopupOpenClose;
+    [SerializeField] private AudioClip clipWinTypePopupOpen;
+    [SerializeField] private AudioClip clipResultPopupOpen;
     [SerializeField] private AudioClip clipAutoplayPanelOpen;
-    [SerializeField] private AudioClip clipFeatureOpenLoop;
-    [SerializeField] private AudioClip clipFreeSpinBg;
-    [SerializeField] private AudioClip clipWheelSegmentTick;
     [SerializeField] private AudioClip clipWinLinePhase1Start;
     [SerializeField] private AudioClip clipReelStop;
+    [SerializeField] private AudioClip clipTurboButtonClick;
+    [SerializeField] private AudioClip clipTensionBuilder;
+    [SerializeField] private AudioClip clipReelSpinLoop;
+    [SerializeField] private AudioClip clipWheelTriggerWinLine;
+    [SerializeField] private AudioClip clipFeatureBg;
+    [SerializeField] private AudioClip clipWheelSpinBg;
+    [SerializeField] private AudioClip clipWheelStop;
 
     private bool _musicEnabled = true;
     private bool _sfxEnabled   = true;
@@ -59,6 +56,16 @@ public class AudioManager : MonoBehaviour
     internal bool SfxEnabled   => _sfxEnabled;
     internal float MusicVolume => _musicVolume;
     internal float SfxVolume   => _sfxVolume;
+
+    internal AudioClip ClipTurboButtonClick => clipTurboButtonClick;
+    internal AudioClip ClipTensionBuilder => clipTensionBuilder;
+    internal AudioClip ClipReelSpinLoop => clipReelSpinLoop;
+    internal AudioClip ClipWinTypePopupOpen => clipWinTypePopupOpen;
+    internal AudioClip ClipResultPopupOpen => clipResultPopupOpen;
+    internal AudioClip ClipWheelTriggerWinLine => clipWheelTriggerWinLine;
+    internal AudioClip ClipFeatureBg => clipFeatureBg;
+    internal AudioClip ClipWheelSpinBg => clipWheelSpinBg;
+    internal AudioClip ClipWheelStop => clipWheelStop;
 
     internal void SetMusicEnabled(bool on)
     {
@@ -101,14 +108,10 @@ public class AudioManager : MonoBehaviour
     private void ApplySfxVolume()
     {
         float v = _sfxEnabled ? _sfxVolume : 0f;
-        if (uiSource           != null) uiSource.volume           = v;
-        if (wheelSegmentSource != null) wheelSegmentSource.volume = v;
-        if (reserveSource      != null) reserveSource.volume      = v;
+        if (uiSource      != null) uiSource.volume      = v;
+        if (reserveSource != null) reserveSource.volume = v;
     }
 
-    /// <summary>
-    /// Uses UI source (AudioSource 2). If busy/playing, falls back to reserve source (AudioSource 4).
-    /// </summary>
     private void PlayUISound(AudioClip clip)
     {
         if (!_sfxEnabled || clip == null) return;
@@ -132,7 +135,7 @@ public class AudioManager : MonoBehaviour
         if (source == null || clip == null) return;
         source.clip   = clip;
         source.loop   = true;
-        source.volume = _musicEnabled ? _musicVolume : 0f;
+        source.volume = (source == bgMusicSource) ? (_musicEnabled ? _musicVolume : 0f) : (_sfxEnabled ? _sfxVolume : 0f);
         source.Play();
     }
 
@@ -143,7 +146,6 @@ public class AudioManager : MonoBehaviour
         source.loop = false;
     }
 
-    // 1. Game Main BG
     internal void PlayBgMusic()
     {
         if (bgMusicSource == null || clipGameMainBg == null) return;
@@ -167,47 +169,35 @@ public class AudioManager : MonoBehaviour
 
     internal void PlayBetPlus()  => PlayBetPlusMinus();
 
-    // 3. Max Bet Reached
     internal void PlayMaxBetReached()
     {
         PlayUISound(clipMaxBetReached);
     }
 
-    // 4. 3 USpin Win Line Loop
-    internal void Play3UspinWinLineLoop()
+    internal void PlayWinTypePopupOpen()
     {
-        if (!_sfxEnabled || clip3UspinWinLineLoop == null) return;
-        PlayLoop(uiSource, clip3UspinWinLineLoop);
+        if (!_sfxEnabled || clipWinTypePopupOpen == null) return;
+        AudioSource targetSource = (reserveSource != null) ? reserveSource : uiSource;
+        PlayLoop(targetSource, clipWinTypePopupOpen);
     }
 
-    internal void Stop3UspinWinLineLoop()
+    internal void StopWinTypePopupOpen()
     {
-        if (uiSource != null && uiSource.clip == clip3UspinWinLineLoop)
-        {
-            StopSource(uiSource);
-        }
-    }
-
-    // 5. Win Object BG (Play at Open)
-    internal void PlayWinObjectBg()
-    {
-        if (!_sfxEnabled || clipWinObjectBg == null) return;
-        PlayLoop(uiSource, clipWinObjectBg);
-    }
-
-    internal void StopWinObjectBg()
-    {
-        if (uiSource != null && uiSource.clip == clipWinObjectBg)
-        {
-            StopSource(uiSource);
-        }
-        if (reserveSource != null && reserveSource.clip == clipWinObjectBg)
+        if (reserveSource != null && reserveSource.clip == clipWinTypePopupOpen)
         {
             StopSource(reserveSource);
         }
+        if (uiSource != null && uiSource.clip == clipWinTypePopupOpen)
+        {
+            StopSource(uiSource);
+        }
     }
 
-    // 6. Spin / Stop / Take / AutoplayStop / WheelStart Btn Sound
+    internal void PlayResultPopupOpen()
+    {
+        PlayUISound(clipResultPopupOpen != null ? clipResultPopupOpen : clipPopupOpenClose);
+    }
+
     internal void PlayPrimaryActionButton()
     {
         PlayUISound(clipPrimaryActionButton != null ? clipPrimaryActionButton : clipGeneralButtonClick);
@@ -237,51 +227,121 @@ public class AudioManager : MonoBehaviour
         PlayUISound(clipAutoplayPanelOpen != null ? clipAutoplayPanelOpen : clipPopupOpenClose);
     }
 
-    internal void PlayFeatureOpenLoop()
+    internal void PlayWheelTriggerWinLine()
     {
-        if (clipFeatureOpenLoop == null) return;
-        PlayLoop(bgMusicSource, clipFeatureOpenLoop);
+        if (!_sfxEnabled || clipWheelTriggerWinLine == null) return;
+        AudioSource targetSource = (reserveSource != null) ? reserveSource : uiSource;
+        PlayLoop(targetSource, clipWheelTriggerWinLine);
     }
 
-    internal void StopFeatureOpenLoop()
+    internal void StopWheelTriggerWinLine()
     {
-        if (bgMusicSource != null && bgMusicSource.clip == clipFeatureOpenLoop)
+        if (reserveSource != null && reserveSource.clip == clipWheelTriggerWinLine)
+        {
+            StopSource(reserveSource);
+        }
+        if (uiSource != null && uiSource.clip == clipWheelTriggerWinLine)
+        {
+            StopSource(uiSource);
+        }
+    }
+
+    internal void PlayFeatureBg()
+    {
+        if (clipFeatureBg == null) return;
+        PlayLoop(bgMusicSource, clipFeatureBg);
+    }
+
+    internal void StopFeatureBg()
+    {
+        if (bgMusicSource != null && bgMusicSource.clip == clipFeatureBg)
         {
             StopBgMusic();
             PlayBgMusic();
         }
     }
 
-    // 12. Bonus Wheel Spin Segment Tick
-    internal void PlayWheelSegmentTick()
+    internal void PlayWheelSpinBg()
     {
-        if (!_sfxEnabled || clipWheelSegmentTick == null) return;
-        if (wheelSegmentSource != null)
+        if (!_sfxEnabled || clipWheelSpinBg == null) return;
+        AudioSource targetSource = (reserveSource != null) ? reserveSource : uiSource;
+        PlayLoop(targetSource, clipWheelSpinBg);
+    }
+
+    internal void StopWheelSpinBg()
+    {
+        if (reserveSource != null && reserveSource.clip == clipWheelSpinBg)
         {
-            wheelSegmentSource.PlayOneShot(clipWheelSegmentTick);
+            StopSource(reserveSource);
         }
-        else
+        if (uiSource != null && uiSource.clip == clipWheelSpinBg)
         {
-            PlayUISound(clipWheelSegmentTick);
+            StopSource(uiSource);
         }
     }
 
-    // 13. Win Line Phase 1 Start
+    internal void PlayWheelStop()
+    {
+        PlayUISound(clipWheelStop);
+    }
+
     internal void PlayWinLinePhase1Start()
     {
         PlayUISound(clipWinLinePhase1Start);
     }
 
-    // 14. Slot Reel Column Stop Sound
     internal void PlayReelStop()
     {
-        if (!_sfxEnabled || clipReelStop == null) return;
-
-        if (wheelSegmentSource != null)
-            wheelSegmentSource.PlayOneShot(clipReelStop);
-        else
-            PlayUISound(clipReelStop);
+        PlayUISound(clipReelStop);
     }
+
+    internal void PlayTurboButtonClick()
+    {
+        PlayUISound(clipTurboButtonClick != null ? clipTurboButtonClick : clipGeneralButtonClick);
+    }
+
+    internal void PlayTurboBtnClick() => PlayTurboButtonClick();
+
+    internal void PlayTensionBuilder()
+    {
+        if (!_sfxEnabled || clipTensionBuilder == null) return;
+        AudioSource targetSource = (reserveSource != null) ? reserveSource : uiSource;
+        PlayLoop(targetSource, clipTensionBuilder);
+    }
+
+    internal void StopTensionBuilder()
+    {
+        if (reserveSource != null && reserveSource.clip == clipTensionBuilder)
+        {
+            StopSource(reserveSource);
+        }
+        if (uiSource != null && uiSource.clip == clipTensionBuilder)
+        {
+            StopSource(uiSource);
+        }
+    }
+
+    internal void PlayReelSpinLoop()
+    {
+        if (!_sfxEnabled || clipReelSpinLoop == null) return;
+        AudioSource targetSource = (reserveSource != null) ? reserveSource : uiSource;
+        PlayLoop(targetSource, clipReelSpinLoop);
+    }
+
+    internal void StopReelSpinLoop()
+    {
+        if (reserveSource != null && reserveSource.clip == clipReelSpinLoop)
+        {
+            StopSource(reserveSource);
+        }
+        if (uiSource != null && uiSource.clip == clipReelSpinLoop)
+        {
+            StopSource(uiSource);
+        }
+    }
+
+    internal void PlayReelSpin() => PlayReelSpinLoop();
+    internal void StopReelSpin() => StopReelSpinLoop();
 
     private bool isForceMuted = false;
 

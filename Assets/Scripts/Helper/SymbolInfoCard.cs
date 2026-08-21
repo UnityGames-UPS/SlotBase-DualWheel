@@ -41,14 +41,12 @@ public class SymbolInfoCard : MonoBehaviour
 
     public void ShowCard(int symbolId, int colIndex, int rowIndex, RectTransform symbolRect, GameManager gameManager, float customYOffset = 0f)
     {
-        // Toggle hide if clicking the exact same symbol position while visible
         if (gameObject.activeSelf && activeCol == colIndex && activeRow == rowIndex)
         {
             HideCard();
             return;
         }
 
-        // Cancel any active auto-close timer
         if (autoCloseCoroutine != null)
         {
             StopCoroutine(autoCloseCoroutine);
@@ -63,16 +61,12 @@ public class SymbolInfoCard : MonoBehaviour
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
 
-        // 1. Position Card based on Reel / Slot Column Index
-        // Columns 0 & 1 (1st and 2nd slot): RIGHT side of symbol
-        // Columns 2, 3, 4 (3rd, 4th, 5th slot): LEFT side of symbol
         Vector3 symbolWorldPos = symbolRect != null ? symbolRect.position : transform.position;
         Vector3 localPos = transform.parent != null ? transform.parent.InverseTransformPoint(symbolWorldPos) : symbolWorldPos;
 
         float offsetDir = (colIndex < 2) ? Mathf.Abs(xSpacing) : -Mathf.Abs(xSpacing);
         rectTransform.localPosition = new Vector3(localPos.x + offsetDir, localPos.y + yOffset + customYOffset, localPos.z);
 
-        // 2. Change Sprite Based on Side
         if (cardBgImage != null)
         {
             Sprite targetSprite = (colIndex < 2) ? GetRightSideSprite() : GetLeftSideSprite();
@@ -82,12 +76,10 @@ public class SymbolInfoCard : MonoBehaviour
             }
         }
 
-        // 3. Setup Info Text Content & TextMeshPro Alignment Settings
         SetupCardContent(symbolId, gameManager);
 
         gameObject.SetActive(true);
 
-        // 4. Start 1.5s Auto Close Timer
         autoCloseCoroutine = StartCoroutine(AutoCloseTimer(autoCloseDuration));
     }
 
@@ -103,7 +95,6 @@ public class SymbolInfoCard : MonoBehaviour
         if (gameManager != null) cachedGameManager = gameManager;
         SetupCardContent(activeSymbolId, cachedGameManager);
 
-        // Reset auto close timer on refresh
         if (autoCloseCoroutine != null)
         {
             StopCoroutine(autoCloseCoroutine);
@@ -126,7 +117,6 @@ public class SymbolInfoCard : MonoBehaviour
 
         if (isWild || isWheel)
         {
-            // SPECIAL SYMBOL: Text alignment CENTER
             infoText.alignment = TextAlignmentOptions.Center;
             infoText.enableWordWrapping = true;
             if (isWheel)
@@ -140,7 +130,6 @@ public class SymbolInfoCard : MonoBehaviour
         }
         else
         {
-            // NORMAL SYMBOL: Text alignment FLUSH
             infoText.alignment = TextAlignmentOptions.Flush;
             infoText.enableWordWrapping = false;
 

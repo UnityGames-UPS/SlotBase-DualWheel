@@ -44,15 +44,14 @@ public class PopupManager : MonoBehaviour
     [Header("Animation Settings")]
     [SerializeField] private float popupScaleInDuration = 0.3f;
     [SerializeField] private float popupScaleOutDuration = 0.2f;
-    [SerializeField] private float rotationSpeed = 360f; // Degrees per second
-    [SerializeField] private float loadingTextCycleSpeed = 0.5f; // Seconds per dot change
+    [SerializeField] private float rotationSpeed = 360f;
+    [SerializeField] private float loadingTextCycleSpeed = 0.5f;
     [SerializeField] private float defaultLoadingDuration = 5f;
     [SerializeField] private float minLoadingDuration = 0.8f;
 
     [Header("References")]
     [SerializeField] private GameManager gameManager;
 
-    // Current popup state
     private GameObject currentActivePopup;
     private Coroutine rotationCoroutine;
     private Coroutine loadingTextCoroutine;
@@ -61,7 +60,6 @@ public class PopupManager : MonoBehaviour
     private float loadingStartTime;
     private System.Action onLoadingClosed;
 
-    // Error popup state
     private bool isErrorCritical = false;
 
     #region Initialization
@@ -113,17 +111,11 @@ public class PopupManager : MonoBehaviour
 
     #region 1. Disconnection Popup
 
-    /// <summary>
-    /// Show disconnection popup - triggered when max ping attempts fail
-    /// </summary>
     internal void ShowDisconnectionPopup()
     {
         ShowDisconnectionPopup("Game disconnected due to network error. Please relaunch the game.");
     }
 
-    /// <summary>
-    /// Show disconnection popup with custom message
-    /// </summary>
     internal void ShowDisconnectionPopup(string message)
     {
         if (disconnectionPopup == null) return;
@@ -158,17 +150,11 @@ public class PopupManager : MonoBehaviour
 
     #region 2. Error Popup
 
-    /// <summary>
-    /// Show error popup for insufficient funds
-    /// </summary>
     internal void ShowInsufficientFundsError()
     {
         ShowErrorPopup("Information", "Insufficient balance. Please add funds to continue.", false);
     }
 
-    /// <summary>
-    /// Show error popup for another device detected
-    /// </summary>
     internal void ShowAnotherDeviceError()
     {
         ShowErrorPopup("Warning", "Your account has been logged in from another device. This session will be closed.", true);
@@ -179,12 +165,6 @@ public class PopupManager : MonoBehaviour
         ShowErrorPopup("Server Error", message, true);
     }
 
-    /// <summary>
-    /// Generic error popup
-    /// </summary>
-    /// <param name="title">Error title (Information, Warning, Server Error)</param>
-    /// <param name="message">Error message</param>
-    /// <param name="isCritical">If true, OK button will exit the game</param>
     internal void ShowErrorPopup(string title, string message, bool isCritical)
     {
         if (errorPopup == null) return;
@@ -234,18 +214,12 @@ public class PopupManager : MonoBehaviour
 
     #region 3. Reconnection Popup
 
-    /// <summary>
-    /// Show reconnection popup with current retry count
-    /// </summary>
-    /// <param name="currentTry">Current retry attempt (1-based)</param>
-    /// <param name="maxTries">Maximum retry attempts</param>
     internal void ShowReconnectionPopup(int currentTry, int maxTries)
     {
         if (reconnectionPopup == null) return;
 
         if (popupParent != null) popupParent.SetActive(true);
 
-        // Don't close other popups for reconnection - it's an overlay
         if (currentActivePopup != reconnectionPopup)
         {
             if (reconnectionTryText != null)
@@ -261,7 +235,6 @@ public class PopupManager : MonoBehaviour
         }
         else
         {
-            // Just update the text if already showing
             if (reconnectionTryText != null)
             {
                 reconnectionTryText.text = $"{currentTry} / {maxTries}";
@@ -269,9 +242,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Close reconnection popup (called when reconnection succeeds)
-    /// </summary>
     internal void CloseReconnectionPopup()
     {
         if (reconnectionPopup == null || !reconnectionPopup.activeSelf) return;
@@ -293,32 +263,19 @@ public class PopupManager : MonoBehaviour
 
     #region 4. Loading Popup
 
-    /// <summary>
-    /// Show loading popup with default 5 second duration
-    /// </summary>
     internal void ShowLoadingPopup()
     {
         ShowLoadingPopup(defaultLoadingDuration);
     }
 
-    /// <summary>
-    /// Show loading popup with custom duration
-    /// </summary>
-    /// <param name="duration">Duration in seconds (0 = indefinite until manually closed)</param>
-    /// <summary>
-    /// Show loading popup with optional auto-close duration
-    /// </summary>
-    /// <param name="duration">Duration in seconds (-1 = use defaultLoadingDuration, 0 = indefinite)</param>
     internal void ShowLoadingPopup(float duration = -1f)
     {
         if (loadingPopup == null) return;
 
-        // Use default if -1
         if (duration < 0) duration = defaultLoadingDuration;
 
         CloseCurrentPopup();
 
-        // Stop any pending delayed close
         if (delayedCloseCoroutine != null)
         {
             StopCoroutine(delayedCloseCoroutine);
@@ -335,7 +292,6 @@ public class PopupManager : MonoBehaviour
         StartRotation(loadingRotatingImage);
         StartLoadingTextAnimation();
 
-        // Auto-close after duration if > 0
         if (duration > 0)
         {
             if (autoCloseCoroutine != null)
@@ -346,12 +302,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Close loading popup manually
-    /// </summary>
-    /// <summary>
-    /// Close loading popup manually, respecting minimum duration
-    /// </summary>
     internal void CloseLoadingPopup(System.Action onComplete = null)
     {
         if (onComplete != null) onLoadingClosed += onComplete;
@@ -410,7 +360,6 @@ public class PopupManager : MonoBehaviour
             }
             UpdatePopupParentState();
 
-            // Invoke and clear callbacks
             onLoadingClosed?.Invoke();
             onLoadingClosed = null;
         });
@@ -427,9 +376,6 @@ public class PopupManager : MonoBehaviour
 
     #region 5. Exit Game Popup
 
-    /// <summary>
-    /// Show game exit confirmation popup
-    /// </summary>
     internal void ShowExitGamePopup()
     {
         if (exitGamePopup == null) return;
@@ -469,9 +415,6 @@ public class PopupManager : MonoBehaviour
 
     #region Animation Helpers
 
-    /// <summary>
-    /// Animate popup opening with scale effect
-    /// </summary>
     private void AnimatePopupOpen(RectTransform popupRect)
     {
         AudioManager.Instance?.PlayPopupOpenClose();
@@ -481,9 +424,6 @@ public class PopupManager : MonoBehaviour
         popupRect.DOScale(1f, popupScaleInDuration).SetEase(Ease.OutBack);
     }
 
-    /// <summary>
-    /// Animate popup closing with scale effect
-    /// </summary>
     private void AnimatePopupClose(RectTransform popupRect, System.Action onComplete)
     {
         AudioManager.Instance?.PlayPopupOpenClose();
@@ -503,9 +443,6 @@ public class PopupManager : MonoBehaviour
         });
     }
 
-    /// <summary>
-    /// Start continuous clockwise rotation for loading/reconnection images
-    /// </summary>
     private void StartRotation(Image targetImage)
     {
         if (targetImage == null) return;
@@ -515,9 +452,6 @@ public class PopupManager : MonoBehaviour
         rotationCoroutine = StartCoroutine(RotateImageCoroutine(targetImage));
     }
 
-    /// <summary>
-    /// Stop rotation coroutine
-    /// </summary>
     private void StopRotation()
     {
         if (rotationCoroutine != null)
@@ -527,9 +461,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Rotate image continuously clockwise
-    /// </summary>
     private IEnumerator RotateImageCoroutine(Image targetImage)
     {
         if (targetImage == null) yield break;
@@ -541,9 +472,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Start loading text animation (. -> .. -> ... loop)
-    /// </summary>
     private void StartLoadingTextAnimation()
     {
         if (loadingAnimatedText == null) return;
@@ -553,9 +481,6 @@ public class PopupManager : MonoBehaviour
         loadingTextCoroutine = StartCoroutine(LoadingTextCoroutine());
     }
 
-    /// <summary>
-    /// Stop loading text animation
-    /// </summary>
     private void StopLoadingTextAnimation()
     {
         if (loadingTextCoroutine != null)
@@ -565,9 +490,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Cycle through loading dots: . -> .. -> ...
-    /// </summary>
     private IEnumerator LoadingTextCoroutine()
     {
         string[] dotStates = { ".", "..", "..." };
@@ -603,9 +525,6 @@ public class PopupManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Close the currently active popup (if any)
-    /// </summary>
     private void CloseCurrentPopup()
     {
         if (currentActivePopup == null) return;
@@ -633,9 +552,6 @@ public class PopupManager : MonoBehaviour
 
     #region Game Control
 
-    /// <summary>
-    /// Exit the game
-    /// </summary>
     private void ExitGame()
     {
         if (gameManager != null)

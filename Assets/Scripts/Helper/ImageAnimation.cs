@@ -38,7 +38,7 @@ public class ImageAnimation : MonoBehaviour
     public ImageState currentAnimationState;
 
     private int indexOfTexture;
-    private float idealFrameRate = 0.0416666679f; // ~24 fps
+    private float idealFrameRate = 0.0416666679f;
     private float delayBetweenAnimation;
 
     public float AnimationSpeed = 5f;
@@ -66,7 +66,6 @@ public class ImageAnimation : MonoBehaviour
     private int phase1CurrentLoop = 0;
     private int phase2CurrentLoop = 0;
 
-    // Time-sync tracking to prevent Invoke drift across active animations
     private float animStartTime;
     private float pauseStartTime;
 
@@ -140,7 +139,6 @@ public class ImageAnimation : MonoBehaviour
         }
         else
         {
-            // Original default behavior for non-dynamic animations
             float currentSpeed = AnimationSpeed;
             if (animationMode == AnimationMode.TWO_PHASE && useCustomSpeed)
             {
@@ -226,7 +224,6 @@ public class ImageAnimation : MonoBehaviour
 
             if (animationMode == AnimationMode.SINGLE_PHASE)
             {
-                // Managed in dynamic branch
             }
             else
             {
@@ -239,7 +236,6 @@ public class ImageAnimation : MonoBehaviour
         }
         else
         {
-            // Legacy default execution path
             SetTextureOfIndex();
             indexOfTexture++;
 
@@ -274,18 +270,14 @@ public class ImageAnimation : MonoBehaviour
 
     private void HandleTwoPhaseAnimation()
     {
-        // Phase 1 logic
         if (currentPhase == 1)
         {
             if (indexOfTexture >= phase2StartIndex)
             {
-                // Phase 1 completed one loop
                 phase1CurrentLoop++;
                 
-                // Check if we should continue Phase 1 or move to Phase 2
                 if (phase1LoopCount == -1 || phase1CurrentLoop < phase1LoopCount)
                 {
-                    // Continue looping Phase 1
                     indexOfTexture = 0;
                     if (!useDynamicFramerate)
                     {
@@ -294,12 +286,10 @@ public class ImageAnimation : MonoBehaviour
                 }
                 else
                 {
-                    // Move to Phase 2
                     currentPhase = 2;
                     indexOfTexture = phase2StartIndex;
                     CalculateFrameDelay();
                     
-                    // Skip Phase 2 if loop count is 0
                     if (phase2LoopCount == 0)
                     {
                         currentAnimationState = ImageState.NONE;
@@ -319,18 +309,14 @@ public class ImageAnimation : MonoBehaviour
                 }
             }
         }
-        // Phase 2 logic
         else if (currentPhase == 2)
         {
             if (indexOfTexture >= textureArray.Count)
             {
-                // Phase 2 completed one loop
                 phase2CurrentLoop++;
                 
-                // Check if we should continue Phase 2 or stop
                 if (phase2LoopCount == -1 || phase2CurrentLoop < phase2LoopCount)
                 {
-                    // Continue looping Phase 2
                     indexOfTexture = phase2StartIndex;
                     if (!useDynamicFramerate)
                     {
@@ -339,7 +325,6 @@ public class ImageAnimation : MonoBehaviour
                 }
                 else
                 {
-                    // Animation complete
                     currentAnimationState = ImageState.NONE;
                 }
             }
@@ -365,7 +350,6 @@ public class ImageAnimation : MonoBehaviour
         currentLoopCount = 0;
         animStartTime = Time.time;
 
-        // Reset two-phase tracking
         currentPhase = 1;
         phase1CurrentLoop = 0;
         phase2CurrentLoop = 0;
@@ -374,7 +358,6 @@ public class ImageAnimation : MonoBehaviour
 
         RevertToInitialState();
 
-        // Skip Phase 1 if in TWO_PHASE mode and loop count is 0
         if (animationMode == AnimationMode.TWO_PHASE && phase1LoopCount == 0)
         {
             currentPhase = 2;
@@ -405,7 +388,6 @@ public class ImageAnimation : MonoBehaviour
             CancelInvoke(nameof(AnimationProcess));
             currentAnimationState = ImageState.NONE;
             
-            // Reset two-phase tracking
             currentPhase = 1;
             phase1CurrentLoop = 0;
             phase2CurrentLoop = 0;

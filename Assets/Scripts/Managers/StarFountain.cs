@@ -19,6 +19,13 @@ public class StarFountain : MonoBehaviour
     [SerializeField] private float minFallDuration = 1.2f;
     [SerializeField] private float maxFallDuration = 2.2f;
 
+    [Header("Rain Density & Frequency Settings")]
+    [SerializeField] private float minSpawnInterval = 0.09f;
+    [SerializeField] private float maxSpawnInterval = 0.20f;
+    [SerializeField] private int minPrewarmCount = 10;
+    [SerializeField] private int maxPrewarmCount = 30;
+    [SerializeField] private int itemsPerSpawn = 1;
+
     private List<GameObject> starPool = new List<GameObject>();
     private Coroutine starRainCoroutine;
 
@@ -67,7 +74,7 @@ public class StarFountain : MonoBehaviour
         StopStarRain();
         if (starPrefab == null) return;
 
-        int prewarmCount = Random.Range(10, 25);
+        int prewarmCount = Random.Range(minPrewarmCount, maxPrewarmCount + 1);
         for (int i = 0; i < prewarmCount; i++)
         {
             float initialProgress = Random.Range(0.08f, 1.2f);
@@ -123,8 +130,12 @@ public class StarFountain : MonoBehaviour
     {
         while (gameObject.activeInHierarchy)
         {
-            SpawnSingleRainStar();
-            yield return new WaitForSeconds(Random.Range(0.18f, 0.32f));
+            int count = Mathf.Max(1, itemsPerSpawn);
+            for (int i = 0; i < count; i++)
+            {
+                SpawnSingleRainStar();
+            }
+            yield return new WaitForSeconds(Random.Range(minSpawnInterval, maxSpawnInterval));
         }
     }
 
