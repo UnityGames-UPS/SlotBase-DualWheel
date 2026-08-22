@@ -76,7 +76,6 @@ public class SlotView : MonoBehaviour
 
     [Header("Phase 1 Total Win Presentation")]
     [SerializeField] private TMPro.TMP_Text phase1TotalWinText;
-    private Coroutine winTextDisableCoroutine;
 
     [Header("Win Animation Objects — Col 0..4  (each has 2 rows, contains ImageAnimation component)")]
     [SerializeField] private GameObject winAnimationParent;
@@ -182,7 +181,7 @@ public class SlotView : MonoBehaviour
     {
         DisableColumns(winAnimationColumns);
         if (winAnimationParent) winAnimationParent.SetActive(false);
-        HidePhase1TotalWinText();
+        HidePhase1TotalWinText(false);
         if (symbolInfoCard) symbolInfoCard.HideCard();
         if (lastSlotTensionFrame) lastSlotTensionFrame.SetActive(false);
         AudioManager.Instance?.StopTensionBuilder();
@@ -1152,7 +1151,8 @@ public class SlotView : MonoBehaviour
         if (isAutoPlaying)
         {
             yield return StartCoroutine(AnimateWinPositionsSingleLoop(flatPositions));
-            HidePhase1TotalWinText();
+            HidePhase1TotalWinText(true);
+            yield return new WaitForSeconds(0.15f);
             onComplete?.Invoke();
         }
         else
@@ -1384,19 +1384,7 @@ public class SlotView : MonoBehaviour
         {
             phase1TotalWinText.text = FormatSpriteText(totalWinAmount);
             AnimateTextScaleAppear(phase1TotalWinText.transform);
-
-            if (winTextDisableCoroutine != null)
-            {
-                StopCoroutine(winTextDisableCoroutine);
-            }
-            winTextDisableCoroutine = StartCoroutine(DisableWinLineTextAfterDelay(1.0f));
         }
-    }
-
-    private IEnumerator DisableWinLineTextAfterDelay(float delaySeconds)
-    {
-        yield return new WaitForSeconds(delaySeconds);
-        HidePhase1TotalWinText();
     }
 
     public static string FormatSpriteText(string input)
@@ -1431,19 +1419,20 @@ public class SlotView : MonoBehaviour
         return FormatSpriteText(amount.ToString("0.###"));
     }
 
-    private void HidePhase1TotalWinText()
+    private void HidePhase1TotalWinText(bool animate = true)
     {
-        if (winTextDisableCoroutine != null)
-        {
-            StopCoroutine(winTextDisableCoroutine);
-            winTextDisableCoroutine = null;
-        }
-
         if (phase1TotalWinText != null)
         {
-            phase1TotalWinText.transform.DOKill();
-            phase1TotalWinText.transform.localScale = Vector3.one;
-            phase1TotalWinText.gameObject.SetActive(false);
+            if (animate)
+            {
+                AnimateTextScaleDisappear(phase1TotalWinText.transform);
+            }
+            else
+            {
+                phase1TotalWinText.transform.DOKill();
+                phase1TotalWinText.transform.localScale = Vector3.one;
+                phase1TotalWinText.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -1458,6 +1447,35 @@ public class SlotView : MonoBehaviour
         seq.Append(textTransform.DOScale(popScale, durationUp).SetEase(Ease.OutQuad));
         seq.Append(textTransform.DOScale(1.0f, durationDown).SetEase(Ease.InQuad));
         winTweens.Add(seq);
+    }
+
+    private void AnimateTextScaleDisappear(Transform textTransform, float duration = 0.15f, System.Action onComplete = null)
+    {
+        if (textTransform == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        textTransform.DOKill();
+        if (textTransform.gameObject.activeSelf)
+        {
+            Sequence seq = DOTween.Sequence();
+            seq.Append(textTransform.DOScale(Vector3.zero, duration).SetEase(Ease.InQuad));
+            seq.OnComplete(() =>
+            {
+                textTransform.gameObject.SetActive(false);
+                textTransform.localScale = Vector3.one;
+                onComplete?.Invoke();
+            });
+            winTweens.Add(seq);
+        }
+        else
+        {
+            textTransform.localScale = Vector3.one;
+            textTransform.gameObject.SetActive(false);
+            onComplete?.Invoke();
+        }
     }
 
 
@@ -1512,7 +1530,7 @@ public class SlotView : MonoBehaviour
         DisableColumns(winAnimationColumns);
         if (winAnimationParent) winAnimationParent.SetActive(false);
         HideAllWinLineTexts();
-        HidePhase1TotalWinText();
+        HidePhase1TotalWinText(false);
 
         foreach (var reel in reelImagesList)
         {
