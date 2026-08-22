@@ -167,11 +167,17 @@ public class SlotView : MonoBehaviour
             go.transform.localPosition = origPos;
         }
     }
-
+private void Awake(){
+            BuildSymbolSpriteArray();
+        InitializeReels();
+}
     private void Start()
     {
-        BuildSymbolSpriteArray();
-        InitializeReels();
+        if (symbolSprites == null || symbolSprites.Length == 0)
+        {
+            BuildSymbolSpriteArray();
+        }
+
         CacheOriginalWinBoxPositions();
         DisableAllOverlays();
         SetupSymbolButtons();

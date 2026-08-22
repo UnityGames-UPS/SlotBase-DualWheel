@@ -271,13 +271,10 @@ public class UIManager : MonoBehaviour
     [SerializeField] private RectTransform miniJackpotPortraitParent;
     [SerializeField] private bool enableJackpotPortraitLevitation = true;
     [SerializeField] private float jackpotLevitateHeight = 10f;
-    [SerializeField] private float jackpotLevitateScaleYMultiplier = 1.08f;
-    [SerializeField] private float jackpotLevitateScaleXMultiplier = 1.03f;
     [SerializeField] private float jackpotLevitateDuration = 1.4f;
     [SerializeField] private float jackpotStaggerDelay = 0.15f;
 
     private readonly Dictionary<Transform, Vector3> jackpotInitialLocalPositions = new Dictionary<Transform, Vector3>();
-    private readonly Dictionary<Transform, Vector3> jackpotInitialLocalScales = new Dictionary<Transform, Vector3>();
     private readonly List<Tween> jackpotPortraitTweens = new List<Tween>();
 
     [Header("Expand-Shrink Controls")]
@@ -1573,7 +1570,7 @@ public class UIManager : MonoBehaviour
     {
         if (!popupRect) return;
         popupRect.localScale = Vector3.zero;
-        popupRect.DOScale(1f, 0.3f).SetEase(Ease.OutBack);
+        popupRect.DOScale(1.4f, 0.3f).SetEase(Ease.OutBack);
     }
 
     private void AnimatePopupClose(RectTransform popupRect, System.Action onComplete)
@@ -1587,7 +1584,7 @@ public class UIManager : MonoBehaviour
         closeSeq.Append(popupRect.DOScale(0f, 0.2f).SetEase(Ease.InBack));
         closeSeq.OnComplete(() =>
         {
-            popupRect.localScale = Vector3.one;
+            popupRect.localScale = new Vector3(1.4f, 1.4f, 1.4f);
             onComplete?.Invoke();
         });
     }
@@ -1798,22 +1795,12 @@ public class UIManager : MonoBehaviour
             if (!jackpotInitialLocalPositions.ContainsKey(tr))
             {
                 jackpotInitialLocalPositions[tr] = tr.localPosition;
-                jackpotInitialLocalScales[tr] = tr.localScale;
             }
 
             Vector3 startPos = jackpotInitialLocalPositions[tr];
-            Vector3 startScale = jackpotInitialLocalScales[tr];
-
             tr.localPosition = startPos;
-            tr.localScale = startScale;
 
             float targetY = startPos.y + jackpotLevitateHeight;
-            Vector3 targetScale = new Vector3(
-                startScale.x * jackpotLevitateScaleXMultiplier,
-                startScale.y * jackpotLevitateScaleYMultiplier,
-                startScale.z
-            );
-
             float delay = i * jackpotStaggerDelay;
 
             Tween posTween = tr.DOLocalMoveY(targetY, jackpotLevitateDuration)
@@ -1821,13 +1808,7 @@ public class UIManager : MonoBehaviour
                 .SetLoops(-1, LoopType.Yoyo)
                 .SetDelay(delay);
 
-            Tween scaleTween = tr.DOScale(targetScale, jackpotLevitateDuration)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetDelay(delay);
-
             jackpotPortraitTweens.Add(posTween);
-            jackpotPortraitTweens.Add(scaleTween);
         }
     }
 
@@ -1848,15 +1829,6 @@ public class UIManager : MonoBehaviour
             {
                 DOTween.Kill(kvp.Key);
                 kvp.Key.localPosition = kvp.Value;
-            }
-        }
-
-        foreach (var kvp in jackpotInitialLocalScales)
-        {
-            if (kvp.Key != null)
-            {
-                DOTween.Kill(kvp.Key);
-                kvp.Key.localScale = kvp.Value;
             }
         }
     }
