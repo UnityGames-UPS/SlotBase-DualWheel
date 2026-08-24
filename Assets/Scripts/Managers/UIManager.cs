@@ -1736,7 +1736,7 @@ public class UIManager : MonoBehaviour
         if (winTween != null) winTween.Kill();
         DOTween.KillAll();
     }
-
+ #endregion
     #region Jackpot Portrait Levitation Animation
 
     private void UpdateJackpotPortraitLevitationFromCurrentOrientation()
@@ -1835,7 +1835,7 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
-    #endregion
+   
 
     #region Connection Popup Management
 
