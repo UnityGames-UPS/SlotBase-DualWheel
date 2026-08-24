@@ -18,7 +18,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Loading & Intro")]
     [SerializeField] private GameObject gameScreen;
-    
+
     [Header("Bet Controls")]
     [SerializeField] private TMP_Text betAmountText;
     [SerializeField] private Button betPlusButton;
@@ -537,9 +537,9 @@ public class UIManager : MonoBehaviour
 
     private void SetupButtons()
     {
-        if (betPlusButton)  betPlusButton.onClick.AddListener(() => gameManager.IncreaseBet());
+        if (betPlusButton) betPlusButton.onClick.AddListener(() => gameManager.IncreaseBet());
         if (betMinusButton) betMinusButton.onClick.AddListener(() => gameManager.DecreaseBet());
-        if (betPlusButtonPortrait)  betPlusButtonPortrait.onClick.AddListener(() => gameManager.IncreaseBet());
+        if (betPlusButtonPortrait) betPlusButtonPortrait.onClick.AddListener(() => gameManager.IncreaseBet());
         if (betMinusButtonPortrait) betMinusButtonPortrait.onClick.AddListener(() => gameManager.DecreaseBet());
 
         if (spinButton)
@@ -626,39 +626,41 @@ public class UIManager : MonoBehaviour
         }
 
         if (normalSpeedButton) normalSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Turbo); });
-        if (turboSpeedButton)  turboSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.QuickSpin); });
-        if (quickSpeedButton)  quickSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Normal); });
+        if (turboSpeedButton) turboSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.QuickSpin); });
+        if (quickSpeedButton) quickSpeedButton.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Normal); });
         if (normalSpeedButtonPortrait) normalSpeedButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Turbo); });
-        if (turboSpeedButtonPortrait)  turboSpeedButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.QuickSpin); });
-        if (quickSpeedButtonPortrait)  quickSpeedButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Normal); });
+        if (turboSpeedButtonPortrait) turboSpeedButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.QuickSpin); });
+        if (quickSpeedButtonPortrait) quickSpeedButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayTurboButtonClick(); SetSpeedMode(SpinSpeed.Normal); });
     }
 
     private void SetupAutoPlayPanel()
     {
-        if (autoPlay10Button)       autoPlay10Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(10); });
-        if (autoPlay50Button)       autoPlay50Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(50); });
-        if (autoPlay100Button)      autoPlay100Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(100); });
-        if (autoPlay200Button)      autoPlay200Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(200); });
-        if (autoPlay500Button)      autoPlay500Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(500); });
+        if (autoPlay10Button) autoPlay10Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(10); });
+        if (autoPlay50Button) autoPlay50Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(50); });
+        if (autoPlay100Button) autoPlay100Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(100); });
+        if (autoPlay200Button) autoPlay200Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(200); });
+        if (autoPlay500Button) autoPlay500Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(500); });
         if (autoPlayInfiniteButton) autoPlayInfiniteButton.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(-1); });
 
-        if (autoPlay10ButtonPortrait)       autoPlay10ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(10); });
-        if (autoPlay50ButtonPortrait)       autoPlay50ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(50); });
-        if (autoPlay100ButtonPortrait)      autoPlay100ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(100); });
-        if (autoPlay200ButtonPortrait)      autoPlay200ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(200); });
-        if (autoPlay500ButtonPortrait)      autoPlay500ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(500); });
+        if (autoPlay10ButtonPortrait) autoPlay10ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(10); });
+        if (autoPlay50ButtonPortrait) autoPlay50ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(50); });
+        if (autoPlay100ButtonPortrait) autoPlay100ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(100); });
+        if (autoPlay200ButtonPortrait) autoPlay200ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(200); });
+        if (autoPlay500ButtonPortrait) autoPlay500ButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(500); });
         if (autoPlayInfiniteButtonPortrait) autoPlayInfiniteButtonPortrait.onClick.AddListener(() => { AudioManager.Instance?.PlayButton(); StartAutoplayWithRounds(-1); });
     }
 
     private void SetupSettingsPanel()
     {
-        if (settingsOpenButton) settingsOpenButton.onClick.AddListener(() => { 
+        if (settingsOpenButton) settingsOpenButton.onClick.AddListener(() =>
+        {
             if (isSettingsPanelOpen)
                 CloseSettingsPanel();
             else
                 OpenSettingsPanel();
         });
-        if (settingsOpenButtonPortrait) settingsOpenButtonPortrait.onClick.AddListener(() => { 
+        if (settingsOpenButtonPortrait) settingsOpenButtonPortrait.onClick.AddListener(() =>
+        {
             if (isSettingsPanelOpen)
                 CloseSettingsPanel();
             else
@@ -891,7 +893,7 @@ public class UIManager : MonoBehaviour
         return start + (end - start) * progress;
     }
 
-   
+
 
     private void SetWinTitleActive(GameObject activeTitle)
     {
@@ -1140,7 +1142,7 @@ public class UIManager : MonoBehaviour
         else
         {
             SetButtonActive(autoSpinStopButton, autoSpinStopButtonPortrait, false);
-            
+
             if (isSpinningState)
             {
                 SetButtonActive(spinButton, spinButtonPortrait, false);
@@ -1561,7 +1563,7 @@ public class UIManager : MonoBehaviour
             SetExpandShrinkButtons(isExpanded);
         }
     }
-    
+
     #endregion
 
     #region Popup Animations (Generic)
@@ -1584,10 +1586,10 @@ public class UIManager : MonoBehaviour
         closeSeq.Append(popupRect.DOScale(0f, 0.2f).SetEase(Ease.InBack));
         closeSeq.OnComplete(() =>
         {
-            popupRect.localScale = Vector3.one * 1.4f ;
+            popupRect.localScale = Vector3.one * 1.4f;
             onComplete?.Invoke();
         });
-    }   
+    }
 
     #endregion
 
@@ -1736,7 +1738,7 @@ public class UIManager : MonoBehaviour
         if (winTween != null) winTween.Kill();
         DOTween.KillAll();
     }
- #endregion
+    #endregion
     #region Jackpot Portrait Levitation Animation
 
     private void UpdateJackpotPortraitLevitationFromCurrentOrientation()
@@ -1768,7 +1770,7 @@ public class UIManager : MonoBehaviour
         Transform grandTr = grandJackpotPortraitParent != null ? grandJackpotPortraitParent : (grandJackpotTextPortrait != null ? grandJackpotTextPortrait.transform.parent : null);
         Transform majorTr = majorJackpotPortraitParent != null ? majorJackpotPortraitParent : (majorJackpotTextPortrait != null ? majorJackpotTextPortrait.transform.parent : null);
         Transform minorTr = minorJackpotPortraitParent != null ? minorJackpotPortraitParent : (minorJackpotTextPortrait != null ? minorJackpotTextPortrait.transform.parent : null);
-        Transform miniTr  = miniJackpotPortraitParent  != null ? miniJackpotPortraitParent  : (miniJackpotTextPortrait != null ? miniJackpotTextPortrait.transform.parent : null);
+        Transform miniTr = miniJackpotPortraitParent != null ? miniJackpotPortraitParent : (miniJackpotTextPortrait != null ? miniJackpotTextPortrait.transform.parent : null);
 
         if (grandTr != null) list.Add(grandTr);
         if (majorTr != null) list.Add(majorTr);
@@ -1835,7 +1837,7 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
-   
+
 
     #region Connection Popup Management
 
