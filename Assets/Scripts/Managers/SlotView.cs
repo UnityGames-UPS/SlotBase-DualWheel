@@ -167,10 +167,11 @@ public class SlotView : MonoBehaviour
             go.transform.localPosition = origPos;
         }
     }
-private void Awake(){
-            BuildSymbolSpriteArray();
+    private void Awake()
+    {
+        BuildSymbolSpriteArray();
         InitializeReels();
-}
+    }
     private void Start()
     {
         if (symbolSprites == null || symbolSprites.Length == 0)
@@ -273,8 +274,8 @@ private void Awake(){
         {
             float reelY = reelTransforms[col].localPosition.y;
             bool isCase1ReelPos = Mathf.Abs(reelY - (-160f)) < 30f;
-            bool isCase1Matrix = (currentDisplayMatrix != null && col < currentDisplayMatrix.Count && 
-                                  currentDisplayMatrix[col] != null && currentDisplayMatrix[col].Count >= 3 && 
+            bool isCase1Matrix = (currentDisplayMatrix != null && col < currentDisplayMatrix.Count &&
+                                  currentDisplayMatrix[col] != null && currentDisplayMatrix[col].Count >= 3 &&
                                   currentDisplayMatrix[col][1] != 0);
 
             if (isCase1ReelPos || isCase1Matrix)
@@ -639,7 +640,8 @@ private void Awake(){
         {
             Sequence startSequence = DOTween.Sequence();
             startSequence.AppendInterval(delay);
-            startSequence.OnComplete(() => {
+            startSequence.OnComplete(() =>
+            {
                 if (isSpinning)
                 {
                     StartReelCycle(columnIndex);
@@ -692,7 +694,8 @@ private void Awake(){
         Tweener loopTweener = slotTransform.DOLocalMoveY(spinBottomY, loopDuration)
             .SetEase(Ease.Linear)
             .SetLoops(-1, LoopType.Restart)
-            .OnStepComplete(() => {
+            .OnStepComplete(() =>
+            {
                 if (columnIndex < reelCycleCount.Count)
                 {
                     reelCycleCount[columnIndex]++;
@@ -885,7 +888,8 @@ private void Awake(){
                 if (reelSettleCurveTweens[columnIndex] != null) reelSettleCurveTweens[columnIndex].Kill();
                 float settleDuration = isQuickStop ? (quickStopDuration * 0.7f) : stopSettleDuration;
                 int colIdx = columnIndex;
-                reelSettleCurveTweens[colIdx] = DOVirtual.Float(reelCurveIntensity[colIdx], 0f, settleDuration, (val) => {
+                reelSettleCurveTweens[colIdx] = DOVirtual.Float(reelCurveIntensity[colIdx], 0f, settleDuration, (val) =>
+                {
                     if (colIdx < reelCurveIntensity.Length) reelCurveIntensity[colIdx] = val;
                 });
             }
@@ -976,7 +980,7 @@ private void Awake(){
                     );
                 }
             }
-            
+
             onComplete?.Invoke();
             return;
         }
@@ -1564,7 +1568,7 @@ private void Awake(){
     #endregion
 
 
-    
+
     internal List<List<int>> GetCurrentDisplayMatrix()
     {
         return currentDisplayMatrix;

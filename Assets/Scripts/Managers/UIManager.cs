@@ -1580,14 +1580,14 @@ public class UIManager : MonoBehaviour
         AudioManager.Instance?.PlayPopupClose();
 
         Sequence closeSeq = DOTween.Sequence();
-        closeSeq.Append(popupRect.DOScale(1.1f, 0.1f));
+        closeSeq.Append(popupRect.DOScale(1.5f, 0.1f));
         closeSeq.Append(popupRect.DOScale(0f, 0.2f).SetEase(Ease.InBack));
         closeSeq.OnComplete(() =>
         {
-            popupRect.localScale = new Vector3(1.4f, 1.4f, 1.4f);
+            popupRect.localScale = Vector3.one * 1.4f ;
             onComplete?.Invoke();
         });
-    }
+    }   
 
     #endregion
 
